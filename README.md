@@ -1,2 +1,2 @@
 # db
-Code base for the data-base
+Code base for the database
