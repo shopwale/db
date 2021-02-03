@@ -1,0 +1,40 @@
+-- Table: public.ItemToTags
+
+-- DROP TABLE public."ItemToTags";
+
+CREATE TABLE public."ItemToTags"
+(
+    "itemID" integer NOT NULL,
+    "tagID" integer NOT NULL,
+    CONSTRAINT "ItemToTags_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT "ItemToTags_Tags" FOREIGN KEY ("tagID")
+        REFERENCES public."Tags" ("tagID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ItemToTags"
+    OWNER to postgres;
+-- Index: fki_ItemToTags_Items
+
+-- DROP INDEX public."fki_ItemToTags_Items";
+
+CREATE INDEX "fki_ItemToTags_Items"
+    ON public."ItemToTags" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ItemToTags_Tags
+
+-- DROP INDEX public."fki_ItemToTags_Tags";
+
+CREATE INDEX "fki_ItemToTags_Tags"
+    ON public."ItemToTags" USING btree
+    ("tagID" ASC NULLS LAST)
+    TABLESPACE pg_default;

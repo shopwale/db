@@ -1,0 +1,18 @@
+-- Table: public.Customer
+
+-- DROP TABLE public."Customer";
+
+CREATE TABLE public."Customer"
+(
+    "customerID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "mobileNumber" bigint NOT NULL,
+    "customerName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "Customer_pkey" PRIMARY KEY ("customerID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Customer"
+    OWNER to postgres;

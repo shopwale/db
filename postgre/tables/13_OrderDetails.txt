@@ -1,0 +1,40 @@
+-- Table: public.OrderDetails
+
+-- DROP TABLE public."OrderDetails";
+
+CREATE TABLE public."OrderDetails"
+(
+    "orderID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    quantity integer NOT NULL,
+    "subTotalPrice" integer NOT NULL,
+    CONSTRAINT "OrderDetails_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "OrderDetails_Orders" FOREIGN KEY ("orderID")
+        REFERENCES public."Orders" ("orderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."OrderDetails"
+    OWNER to postgres;
+-- Index: fki_OrderDetails_Items
+
+-- DROP INDEX public."fki_OrderDetails_Items";
+
+CREATE INDEX "fki_OrderDetails_Items"
+    ON public."OrderDetails" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_OrderDetails_Orders
+
+-- DROP INDEX public."fki_OrderDetails_Orders";
+
+CREATE INDEX "fki_OrderDetails_Orders"
+    ON public."OrderDetails" USING btree
+    ("orderID" ASC NULLS LAST)
+    TABLESPACE pg_default;

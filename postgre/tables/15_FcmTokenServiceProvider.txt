@@ -1,0 +1,28 @@
+-- Table: public.FcmTokenServiceProvider
+
+-- DROP TABLE public."FcmTokenServiceProvider";
+
+CREATE TABLE public."FcmTokenServiceProvider"
+(
+    "serviceProviderID" integer NOT NULL,
+    "fcmToken" character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "FcmTokenServiceProvider_pkey" PRIMARY KEY ("serviceProviderID", "fcmToken"),
+    CONSTRAINT "FcmTokenServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."FcmTokenServiceProvider"
+    OWNER to postgres;
+-- Index: fki_FcmTokenServiceProvider_ServiceProvider
+
+-- DROP INDEX public."fki_FcmTokenServiceProvider_ServiceProvider";
+
+CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider"
+    ON public."FcmTokenServiceProvider" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;

@@ -1,0 +1,17 @@
+-- Table: public.Items
+
+-- DROP TABLE public."Items";
+
+CREATE TABLE public."Items"
+(
+    "itemID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "itemName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "categoryID" integer NOT NULL,
+    "subCategoryID" integer NOT NULL,
+    CONSTRAINT "Items_pkey" PRIMARY KEY ("itemID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Items"
+    OWNER to postgres;

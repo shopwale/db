@@ -1,0 +1,38 @@
+-- Table: public.CustomerToServiceProvider
+
+-- DROP TABLE public."CustomerToServiceProvider";
+
+CREATE TABLE public."CustomerToServiceProvider"
+(
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL,
+    CONSTRAINT "CustomerToServiceProvider_Customer" FOREIGN KEY ("customerID")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "CustomerToServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."CustomerToServiceProvider"
+    OWNER to postgres;
+-- Index: fki_customerID
+
+-- DROP INDEX public."fki_customerID";
+
+CREATE INDEX "fki_customerID"
+    ON public."CustomerToServiceProvider" USING btree
+    ("customerID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_serviceProviderID
+
+-- DROP INDEX public."fki_serviceProviderID";
+
+CREATE INDEX "fki_serviceProviderID"
+    ON public."CustomerToServiceProvider" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;

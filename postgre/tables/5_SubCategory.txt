@@ -1,0 +1,16 @@
+-- Table: public.SubCategory
+
+-- DROP TABLE public."SubCategory";
+
+CREATE TABLE public."SubCategory"
+(
+    "subCategoryID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "subCategoryName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "categoryID" integer NOT NULL,
+    CONSTRAINT "subCategory_pkey" PRIMARY KEY ("subCategoryID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."SubCategory"
+    OWNER to postgres;

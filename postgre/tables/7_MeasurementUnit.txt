@@ -1,0 +1,15 @@
+-- Table: public.MeasurementUnit
+
+-- DROP TABLE public."MeasurementUnit";
+
+CREATE TABLE public."MeasurementUnit"
+(
+    "measurementID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "unitOfMeasure" character(10) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "MeasurementUnit_pkey" PRIMARY KEY ("measurementID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."MeasurementUnit"
+    OWNER to postgres;

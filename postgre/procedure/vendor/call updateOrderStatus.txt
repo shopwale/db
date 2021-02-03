@@ -1,0 +1,3 @@
+CALL public."updateOrderStatus"(
+	'{"orderId":3,"orderStatus":"Cancelled"}'::json
+)

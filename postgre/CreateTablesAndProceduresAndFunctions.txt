@@ -1,0 +1,558 @@
+
+
+-- Table: public.Customer
+
+-- DROP TABLE public."Customer";
+
+CREATE TABLE public."Customer"
+(
+    "customerID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "mobileNumber" bigint NOT NULL,
+    "customerName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "Customer_pkey" PRIMARY KEY ("customerID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Customer"
+    OWNER to postgres;
+
+
+
+
+
+-- Table: public.ServiceProvider
+
+-- DROP TABLE public."ServiceProvider";
+
+CREATE TABLE public."ServiceProvider"
+(
+    "serviceProviderID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "mobileNumber" bigint NOT NULL,
+    "serviceProviderName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "ServiceProvider_pkey" PRIMARY KEY ("serviceProviderID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ServiceProvider"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.CustomerToServiceProvider
+
+-- DROP TABLE public."CustomerToServiceProvider";
+
+CREATE TABLE public."CustomerToServiceProvider"
+(
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL,
+    CONSTRAINT "CustomerToServiceProvider_Customer" FOREIGN KEY ("customerID")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "CustomerToServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."CustomerToServiceProvider"
+    OWNER to postgres;
+-- Index: fki_customerID
+
+-- DROP INDEX public."fki_customerID";
+
+CREATE INDEX "fki_customerID"
+    ON public."CustomerToServiceProvider" USING btree
+    ("customerID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_serviceProviderID
+
+-- DROP INDEX public."fki_serviceProviderID";
+
+CREATE INDEX "fki_serviceProviderID"
+    ON public."CustomerToServiceProvider" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+
+-- Table: public.Category
+
+-- DROP TABLE public."Category";
+
+CREATE TABLE public."Category"
+(
+    "categoryID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "categoryName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "Category_pkey" PRIMARY KEY ("categoryID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Category"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.SubCategory
+
+-- DROP TABLE public."SubCategory";
+
+CREATE TABLE public."SubCategory"
+(
+    "subCategoryID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "subCategoryName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "categoryID" integer NOT NULL,
+    CONSTRAINT "subCategory_pkey" PRIMARY KEY ("subCategoryID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."SubCategory"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.Items
+
+-- DROP TABLE public."Items";
+
+CREATE TABLE public."Items"
+(
+    "itemID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "itemName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "categoryID" integer NOT NULL,
+    "subCategoryID" integer NOT NULL,
+    CONSTRAINT "Items_pkey" PRIMARY KEY ("itemID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Items"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.MeasurementUnit
+
+-- DROP TABLE public."MeasurementUnit";
+
+CREATE TABLE public."MeasurementUnit"
+(
+    "measurementID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "unitOfMeasure" character(10) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "MeasurementUnit_pkey" PRIMARY KEY ("measurementID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."MeasurementUnit"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.Tags
+
+-- DROP TABLE public."Tags";
+
+CREATE TABLE public."Tags"
+(
+    "tagID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "tagName" character(15) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "Tags_pkey" PRIMARY KEY ("tagID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Tags"
+    OWNER to postgres;
+
+
+
+
+-- Table: public.ItemToTags
+
+-- DROP TABLE public."ItemToTags";
+
+CREATE TABLE public."ItemToTags"
+(
+    "itemID" integer NOT NULL,
+    "tagID" integer NOT NULL,
+    CONSTRAINT "ItemToTags_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT "ItemToTags_Tags" FOREIGN KEY ("tagID")
+        REFERENCES public."Tags" ("tagID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ItemToTags"
+    OWNER to postgres;
+-- Index: fki_ItemToTags_Items
+
+-- DROP INDEX public."fki_ItemToTags_Items";
+
+CREATE INDEX "fki_ItemToTags_Items"
+    ON public."ItemToTags" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ItemToTags_Tags
+
+-- DROP INDEX public."fki_ItemToTags_Tags";
+
+CREATE INDEX "fki_ItemToTags_Tags"
+    ON public."ItemToTags" USING btree
+    ("tagID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.ServiceProviderToCategoryToSubCategoryToItems
+
+-- DROP TABLE public."ServiceProviderToCategoryToSubCategoryToItems";
+
+CREATE TABLE public."ServiceProviderToCategoryToSubCategoryToItems"
+(
+    "serviceProviderID" integer NOT NULL,
+    "categoryID" integer NOT NULL,
+    "subCategoryID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    "measurementID" integer NOT NULL,
+    price integer NOT NULL,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_Category" FOREIGN KEY ("categoryID")
+        REFERENCES public."Category" ("categoryID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_MeasurementUnit" FOREIGN KEY ("measurementID")
+        REFERENCES public."MeasurementUnit" ("measurementID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_SubCategory" FOREIGN KEY ("subCategoryID")
+        REFERENCES public."SubCategory" ("subCategoryID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ServiceProviderToCategoryToSubCategoryToItems"
+    OWNER to postgres;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_Category
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_Category";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_Category"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("categoryID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_Items
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_Items";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_Items"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("measurementID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("subCategoryID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.OrderStatus
+
+-- DROP TABLE public."OrderStatus";
+
+CREATE TABLE public."OrderStatus"
+(
+    "orderStatusID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "orderStatusName" character(12) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "OrderStatus_pkey" PRIMARY KEY ("orderStatusID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."OrderStatus"
+    OWNER to postgres;
+
+
+
+
+
+
+-- Table: public.Orders
+
+-- DROP TABLE public."Orders";
+
+CREATE TABLE public."Orders"
+(
+    "orderID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL,
+    "orderDate" date NOT NULL,
+    "totalPrice" integer NOT NULL,
+    "orderStatusID" integer NOT NULL,
+    "isDeliver" boolean NOT NULL,
+    CONSTRAINT "Orders_pkey" PRIMARY KEY ("orderID"),
+    CONSTRAINT "Orders_Customer" FOREIGN KEY ("customerID")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "Orders_OrderStatus" FOREIGN KEY ("orderStatusID")
+        REFERENCES public."OrderStatus" ("orderStatusID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "Orders_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Orders"
+    OWNER to postgres;
+-- Index: fki_Order_Customer
+
+-- DROP INDEX public."fki_Order_Customer";
+
+CREATE INDEX "fki_Order_Customer"
+    ON public."Orders" USING btree
+    ("customerID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_Orders_OrderStatus
+
+-- DROP INDEX public."fki_Orders_OrderStatus";
+
+CREATE INDEX "fki_Orders_OrderStatus"
+    ON public."Orders" USING btree
+    ("orderStatusID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_Orders_ServiceProvider
+
+-- DROP INDEX public."fki_Orders_ServiceProvider";
+
+CREATE INDEX "fki_Orders_ServiceProvider"
+    ON public."Orders" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+-- Table: public.OrderDetails
+
+-- DROP TABLE public."OrderDetails";
+
+CREATE TABLE public."OrderDetails"
+(
+    "orderID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    quantity integer NOT NULL,
+    "subTotalPrice" integer NOT NULL,
+    CONSTRAINT "OrderDetails_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "OrderDetails_Orders" FOREIGN KEY ("orderID")
+        REFERENCES public."Orders" ("orderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."OrderDetails"
+    OWNER to postgres;
+-- Index: fki_OrderDetails_Items
+
+-- DROP INDEX public."fki_OrderDetails_Items";
+
+CREATE INDEX "fki_OrderDetails_Items"
+    ON public."OrderDetails" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_OrderDetails_Orders
+
+-- DROP INDEX public."fki_OrderDetails_Orders";
+
+CREATE INDEX "fki_OrderDetails_Orders"
+    ON public."OrderDetails" USING btree
+    ("orderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+-- Table: public.FcmTokenCustomer
+
+-- DROP TABLE public."FcmTokenCustomer";
+
+CREATE TABLE public."FcmTokenCustomer"
+(
+    "customerID" integer NOT NULL,
+    "fcmToken" character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "FcmTokenCustomer_pkey" PRIMARY KEY ("customerID", "fcmToken"),
+    CONSTRAINT "FcmTokenCustomer_Customer" FOREIGN KEY ("customerID")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."FcmTokenCustomer"
+    OWNER to postgres;
+-- Index: fki_FcmTokenCustomer_Customer
+
+-- DROP INDEX public."fki_FcmTokenCustomer_Customer";
+
+CREATE INDEX "fki_FcmTokenCustomer_Customer"
+    ON public."FcmTokenCustomer" USING btree
+    ("customerID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+-- Table: public.FcmTokenServiceProvider
+
+-- DROP TABLE public."FcmTokenServiceProvider";
+
+CREATE TABLE public."FcmTokenServiceProvider"
+(
+    "serviceProviderID" integer NOT NULL,
+    "fcmToken" character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "FcmTokenServiceProvider_pkey" PRIMARY KEY ("serviceProviderID", "fcmToken"),
+    CONSTRAINT "FcmTokenServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."FcmTokenServiceProvider"
+    OWNER to postgres;
+-- Index: fki_FcmTokenServiceProvider_ServiceProvider
+
+-- DROP INDEX public."fki_FcmTokenServiceProvider_ServiceProvider";
+
+CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider"
+    ON public."FcmTokenServiceProvider" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Function: public.order(json)
+
+-- DROP Function public."order"(json);
+
+CREATE OR REPLACE function public."order"(
+	orderdetails json) returns bigint
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    jsonOrder json := orderDetails::json
+                
+                
+                ;
+  
+arrayItems json := jsonOrder->>'items';
+
+i json;
+declare orderId bigint;
+BEGIN
+
+INSERT INTO public."Orders"(
+                "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
+                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,cast(jsonOrder->>'totalPrice' as integer) , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+
+  FOR i IN SELECT * FROM json_array_elements(arrayItems)
+  LOOP
+    RAISE NOTICE 'output from space %', i->>'itemId';
+                RAISE NOTICE 'Order Id %', orderId;
+                INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
+    values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),cast(i->>'subTotalPrice' as integer));
+                
+  END LOOP;
+    return orderId;
+END;
+$BODY$;
+
+
+-- PROCEDURE: public.updateOrderStatus(json)
+
+-- DROP PROCEDURE public."updateOrderStatus"(json);
+
+CREATE OR REPLACE PROCEDURE public."updateOrderStatus"(
+	orderdetails json)
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    jsonOrder json := orderDetails::json;
+  
+--arrayItems json := jsonOrder->>'orderId';
+--arrayItems json := jsonOrder->>'orderStatus';
+--i json;
+--declare orderId bigint;
+BEGIN
+update public."Orders" set "orderStatusID" = (SELECT "orderStatusID" FROM public."OrderStatus" where Trim("orderStatusName") = jsonOrder->>'orderStatus') where "orderID" = cast(jsonOrder->>'orderId' as integer);
+    EXCEPTION
+        WHEN Others Then
+        
+		raise exception 'error';
+  END;
+$BODY$;

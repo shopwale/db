@@ -1,0 +1,36 @@
+
+-- PROCEDURE: public.order(json)
+
+-- DROP PROCEDURE public."order"(json);
+
+CREATE OR REPLACE function public."order"(
+	orderdetails json) returns bigint
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    jsonOrder json := orderDetails::json
+                
+                
+                ;
+  
+arrayItems json := jsonOrder->>'items';
+
+i json;
+declare orderId bigint;
+BEGIN
+
+INSERT INTO public."Orders"(
+                "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
+                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,cast(jsonOrder->>'totalPrice' as integer) , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+
+  FOR i IN SELECT * FROM json_array_elements(arrayItems)
+  LOOP
+    RAISE NOTICE 'output from space %', i->>'itemId';
+                RAISE NOTICE 'Order Id %', orderId;
+                INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
+    values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),cast(i->>'subTotalPrice' as integer));
+                
+  END LOOP;
+    return orderId;
+END;
+$BODY$;

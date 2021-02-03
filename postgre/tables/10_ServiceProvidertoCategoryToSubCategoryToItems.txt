@@ -1,0 +1,78 @@
+-- Table: public.ServiceProviderToCategoryToSubCategoryToItems
+
+-- DROP TABLE public."ServiceProviderToCategoryToSubCategoryToItems";
+
+CREATE TABLE public."ServiceProviderToCategoryToSubCategoryToItems"
+(
+    "serviceProviderID" integer NOT NULL,
+    "categoryID" integer NOT NULL,
+    "subCategoryID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    "measurementID" integer NOT NULL,
+    price integer NOT NULL,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_Category" FOREIGN KEY ("categoryID")
+        REFERENCES public."Category" ("categoryID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_Items" FOREIGN KEY ("itemID")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_MeasurementUnit" FOREIGN KEY ("measurementID")
+        REFERENCES public."MeasurementUnit" ("measurementID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "ServiceProviderToCategoryToSubCategoryToItems_SubCategory" FOREIGN KEY ("subCategoryID")
+        REFERENCES public."SubCategory" ("subCategoryID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ServiceProviderToCategoryToSubCategoryToItems"
+    OWNER to postgres;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_Category
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_Category";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_Category"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("categoryID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_Items
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_Items";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_Items"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("itemID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_MeasurementUn"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("measurementID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory
+
+-- DROP INDEX public."fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory";
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_SubCategory"
+    ON public."ServiceProviderToCategoryToSubCategoryToItems" USING btree
+    ("subCategoryID" ASC NULLS LAST)
+    TABLESPACE pg_default;

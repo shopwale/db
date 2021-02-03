@@ -1,0 +1,199 @@
+INSERT INTO public."Customer"(
+	 "mobileNumber", "customerName", "pinCode", address)
+	VALUES ( 9972887466, 'Abdel', 560076, 'Claw road');
+
+
+
+INSERT INTO public."ServiceProvider"(
+	 "mobileNumber", "serviceProviderName", "pinCode", address)
+	VALUES ( 9972998880, 'Welcome Poultry', 560076, 'Cliff road');
+INSERT INTO public."ServiceProvider"(
+	 "mobileNumber", "serviceProviderName", "pinCode", address)
+	VALUES ( 9898989340, 'Fresh Cut', 560076, 'Cliff road');
+
+
+
+INSERT INTO public."CustomerToServiceProvider"(
+	"customerID", "serviceProviderID")
+	VALUES (1, 1);
+INSERT INTO public."CustomerToServiceProvider"(
+	"customerID", "serviceProviderID")
+	VALUES (1, 2);
+
+
+
+INSERT INTO public."Category"(
+	 "categoryName")
+	VALUES ( 'Grocery');
+INSERT INTO public."Category"(
+	 "categoryName")
+	VALUES ( 'Medicines');
+INSERT INTO public."Category"(
+	 "categoryName")
+	VALUES ( 'Meat');
+INSERT INTO public."Category"(
+	 "categoryName")
+	VALUES ( 'Saloon');
+
+
+
+INSERT INTO public."SubCategory"(
+	"subCategoryName", "categoryID")
+	VALUES ( 'Chicken', 3);
+INSERT INTO public."SubCategory"(
+	"subCategoryName", "categoryID")
+	VALUES ( 'Mutton', 3);
+INSERT INTO public."SubCategory"(
+	"subCategoryName", "categoryID")
+	VALUES ( 'Fish', 3);
+
+
+
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Boneless', 3, 1);
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Biryani Cut', 3, 1);
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Skinless', 3, 1);
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Boneless', 3, 2);
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Biryani Cut', 3, 2);
+INSERT INTO public."Items"(
+	 "itemName", "categoryID", "subCategoryID")
+	VALUES ( 'Skinless', 3, 2);
+
+
+
+INSERT INTO public."MeasurementUnit"(
+	"unitOfMeasure")
+	VALUES ( 'KG');
+INSERT INTO public."MeasurementUnit"(
+	"unitOfMeasure")
+	VALUES ( 'PCS');
+INSERT INTO public."MeasurementUnit"(
+	"unitOfMeasure")
+	VALUES ( 'LTR');
+
+
+
+INSERT INTO public."Tags"(
+	 "tagName")
+	VALUES ( 'Protein');
+INSERT INTO public."Tags"(
+	 "tagName")
+	VALUES ( 'Health');
+
+
+
+INSERT INTO public."ItemToTags"(
+	"itemID", "tagID")
+	VALUES (1, 1);
+INSERT INTO public."ItemToTags"(
+	"itemID", "tagID")
+	VALUES (2, 1);
+INSERT INTO public."ItemToTags"(
+	"itemID", "tagID")
+	VALUES (3, 1);
+
+
+
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 1, 1, 1, 100);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 1, 2, 1, 100);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 1, 3, 1, 100);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 2, 4, 1, 100);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 2, 5, 1, 100);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (1, 3, 2, 6, 1, 100);
+
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 1, 1, 1, 110);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 1, 2, 1, 110);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 1, 3, 1, 110);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 2, 4, 1, 110);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 2, 5, 1, 110);
+INSERT INTO public."ServiceProviderToCategoryToSubCategoryToItems"(
+	"serviceProviderID", "categoryID", "subCategoryID", "itemID", "measurementID", price)
+	VALUES (2, 3, 2, 6, 1, 110);
+
+
+
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'Pending');
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'Accepted');
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'Rejected');
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'Completed');
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'OutToDeliver');
+INSERT INTO public."OrderStatus"(
+	 "orderStatusName")
+	VALUES ( 'ReadyToPick');
+
+
+
+INSERT INTO public."Orders"(
+	 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID", "isDeliver")
+	VALUES ( 1, 1,now(), 1000, 1, true);
+INSERT INTO public."Orders"(
+	 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID", "isDeliver")
+	VALUES ( 1, 1,now(), 2000, 1, false);
+INSERT INTO public."Orders"(
+	 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID", "isDeliver")
+	VALUES ( 1, 2,now(), 1000, 1, true);
+INSERT INTO public."Orders"(
+	 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID", "isDeliver")
+	VALUES ( 1, 2,now(), 2000, 1, true);
+
+
+INSERT INTO public."OrderDetails"(
+	"orderID", "itemID", quantity, "subTotalPrice")
+	VALUES (1, 1, 1, 100);
+
+
+INSERT INTO public."FcmTokenServiceProvider"(
+	"serviceProviderID", "fcmToken")
+	VALUES (1, 'eghFkvP8SbqnPMz4E46b0I:APA91bHSsHjFRXgLPG29qku5dzL1dd7yK04NsyCy8DDATrfHWooUHftEzMGcS6AZuOPdPninKR2Ebx-a_JDzITPiXxBJygciZBWHHtTNFXVsYBcdMgdXMyLuTsePKt3RqpfU4b0epGi3');
+INSERT INTO public."FcmTokenServiceProvider"(
+	"serviceProviderID", "fcmToken")
+	VALUES (2, 'eghFkvP8SbqnPMz4E46b0I:APA91bHSsHjFRXgLPG29qku5dzL1dd7yK04NsyCy8DDATrfHWooUHftEzMGcS6AZuOPdPninKR2Ebx-a_JDzITPiXxBJygciZBWHHtTNFXVsYBcdMgdXMyLuTsePKt3RqpfU4b0epGi3');
+
+
+INSERT INTO public."FcmTokenCustomer"(
+	"customerID", "fcmToken")
+	VALUES (1, 'testtoken');
+
+
+

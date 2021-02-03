@@ -1,0 +1,18 @@
+-- Table: public.ServiceProvider
+
+-- DROP TABLE public."ServiceProvider";
+
+CREATE TABLE public."ServiceProvider"
+(
+    "serviceProviderID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "mobileNumber" bigint NOT NULL,
+    "serviceProviderName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "ServiceProvider_pkey" PRIMARY KEY ("serviceProviderID")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."ServiceProvider"
+    OWNER to postgres;

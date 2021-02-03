@@ -1,0 +1,56 @@
+-- Table: public.Orders
+
+-- DROP TABLE public."Orders";
+
+CREATE TABLE public."Orders"
+(
+    "orderID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL,
+    "orderDate" timestamp with time zone NOT NULL,
+    "totalPrice" integer NOT NULL,
+    "orderStatusID" integer NOT NULL,
+    "isDeliver" boolean NOT NULL,
+    CONSTRAINT "Orders_pkey" PRIMARY KEY ("orderID"),
+    CONSTRAINT "Orders_Customer" FOREIGN KEY ("customerID")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT "Orders_OrderStatus" FOREIGN KEY ("orderStatusID")
+        REFERENCES public."OrderStatus" ("orderStatusID") MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT "Orders_ServiceProvider" FOREIGN KEY ("serviceProviderID")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Orders"
+    OWNER to postgres;
+-- Index: fki_Order_Customer
+
+-- DROP INDEX public."fki_Order_Customer";
+
+CREATE INDEX "fki_Order_Customer"
+    ON public."Orders" USING btree
+    ("customerID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_Orders_OrderStatus
+
+-- DROP INDEX public."fki_Orders_OrderStatus";
+
+CREATE INDEX "fki_Orders_OrderStatus"
+    ON public."Orders" USING btree
+    ("orderStatusID" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: fki_Orders_ServiceProvider
+
+-- DROP INDEX public."fki_Orders_ServiceProvider";
+
+CREATE INDEX "fki_Orders_ServiceProvider"
+    ON public."Orders" USING btree
+    ("serviceProviderID" ASC NULLS LAST)
+    TABLESPACE pg_default;

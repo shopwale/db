@@ -1,0 +1,5 @@
+
+
+
+
+Select public.order('{"serviceProviderId":1,"customerId":1,"items":[{"itemId":1,"quantity":1,"subTotalPrice":110}],"totalPrice":220,"isDeliver":true}'::json)
