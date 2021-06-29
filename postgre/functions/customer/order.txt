@@ -17,20 +17,33 @@ arrayItems json := jsonOrder->>'items';
 
 i json;
 declare orderId bigint;
-BEGIN
+declare itemPrice integer;
+declare subTotalPrice integer;
+declare totalPrice integer;
 
+BEGIN
+totalPrice=0;
 INSERT INTO public."Orders"(
                 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
-                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,cast(jsonOrder->>'totalPrice' as integer) , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,totalPrice , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+--,cast(jsonOrder->>'totalPrice' as integer) 
 
   FOR i IN SELECT * FROM json_array_elements(arrayItems)
   LOOP
     RAISE NOTICE 'output from space %', i->>'itemId';
                 RAISE NOTICE 'Order Id %', orderId;
+
+              	SELECT price into itemPrice FROM public."ServiceProviderToCategoryToSubCategoryToItems"	
+				        Where  "serviceProviderID"=cast(jsonOrder->>'serviceProviderId' as integer) and  "itemID"=cast(i->>'itemId' as integer) ;
+				        subTotalPrice = itemPrice*cast(i->>'quantity' as integer);
+				        totalPrice = totalPrice + subTotalPrice ;
+
                 INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
-    values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),cast(i->>'subTotalPrice' as integer));
+    values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),subTotalPrice);
                 
   END LOOP;
+    			--setting the actual total price to the intial dummy value
+  				Update public."Orders" set "totalPrice" = totalPrice where "orderID" = orderId;
     return orderId;
 END;
 $BODY$;
