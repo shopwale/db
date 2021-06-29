@@ -1,0 +1,20 @@
+-- Table: public.CartDetails
+
+-- DROP TABLE public."CartDetails";
+
+CREATE TABLE public."CartDetails"
+(
+    "cartId" integer NOT NULL,
+    "itemId" integer NOT NULL,
+    quantity integer NOT NULL,
+    CONSTRAINT "CartDetails_Cart" FOREIGN KEY ("cartId")
+        REFERENCES public."Cart" ("cartId") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."CartDetails"
+    OWNER to postgres;
