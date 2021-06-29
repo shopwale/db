@@ -494,6 +494,56 @@ CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider"
     TABLESPACE pg_default;
 
 
+-- Table: public.Cart
+
+-- DROP TABLE public."Cart";
+
+CREATE TABLE public."Cart"
+(
+    "cartId" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    "serviceProviderId" integer NOT NULL,
+    "customerId" integer NOT NULL,
+    "cartStatus" bit(1) NOT NULL,
+    "totalPrice" integer NOT NULL,
+    CONSTRAINT "Cart_pkey" PRIMARY KEY ("cartId"),
+    CONSTRAINT "Cart_Customer" FOREIGN KEY ("customerId")
+        REFERENCES public."Customer" ("customerID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID,
+    CONSTRAINT "Cart_ServiceProvider" FOREIGN KEY ("serviceProviderId")
+        REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."Cart"
+    OWNER to postgres;
+
+-- Table: public.CartDetails
+
+-- DROP TABLE public."CartDetails";
+
+CREATE TABLE public."CartDetails"
+(
+    "cartId" integer NOT NULL,
+    "itemId" integer NOT NULL,
+    quantity integer NOT NULL,
+    CONSTRAINT "CartDetails_Cart" FOREIGN KEY ("cartId")
+        REFERENCES public."Cart" ("cartId") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."CartDetails"
+    OWNER to postgres;
+
 
 
 -- Function: public.order(json)
