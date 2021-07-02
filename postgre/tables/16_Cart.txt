@@ -9,17 +9,15 @@ CREATE TABLE public."Cart"
     "customerId" integer NOT NULL,
     "cartStatus" bit(1) NOT NULL,
     "totalPrice" integer NOT NULL,
-    CONSTRAINT "Cart_pkey" PRIMARY KEY ("cartId"),
+    CONSTRAINT "Cart_pkey" PRIMARY KEY ("cartId", "customerId", "serviceProviderId"),
     CONSTRAINT "Cart_Customer" FOREIGN KEY ("customerId")
         REFERENCES public."Customer" ("customerID") MATCH SIMPLE
         ON UPDATE CASCADE
-        ON DELETE CASCADE
-        NOT VALID,
+        ON DELETE CASCADE,
     CONSTRAINT "Cart_ServiceProvider" FOREIGN KEY ("serviceProviderId")
         REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
         ON UPDATE CASCADE
         ON DELETE CASCADE
-        NOT VALID
 )
 
 TABLESPACE pg_default;

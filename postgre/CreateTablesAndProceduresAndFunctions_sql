@@ -491,6 +491,7 @@ CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider"
     TABLESPACE pg_default;
 
 
+
 -- Table: public.Cart
 
 -- DROP TABLE public."Cart";
@@ -583,6 +584,79 @@ INSERT INTO public."Orders"(
     return orderId;
 END;
 $BODY$;
+
+-- FUNCTION: public.cart(json)
+
+-- DROP FUNCTION public.cart(json);
+
+CREATE OR REPLACE FUNCTION public.cart(
+	cartdetails json)
+    RETURNS bigint
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE	jsonOrder json := cartDetails::json;
+		DECLARE cartId integer;
+		DECLARE cartSize integer;
+		DECLARE serviceProviderId  integer;
+		DECLARE customerId  integer;
+		DECLARE itemId integer;
+		DECLARE qty integer;
+
+		BEGIN
+		
+		serviceProviderId = CAST(jsonOrder->>'serviceProviderId' as integer);
+		customerId= CAST(jsonOrder->>'customerId' as integer);
+		itemId=CAST(jsonOrder->>'itemId' as integer);
+		qty=CAST(jsonOrder->>'quantity' as integer);
+		
+		SELECT count("cartId") into cartSize
+				FROM public."Cart"
+				Where "serviceProviderId"=serviceProviderId
+				AND  "customerId"=customerId;
+
+		if (cartSize=0) then
+		  --statements;
+		  RAISE NOTICE 'output from space %', cartSize;
+		  INSERT INTO public."Cart"("serviceProviderId", "customerId", "totalPrice")
+			VALUES ( serviceProviderId , customerId,  0) returning "cartId" into cartId ;
+			--cartId= ;
+		else
+		  --alternative-statements;
+		  RAISE NOTICE 'output from space %', cartSize;
+		  --Get cartId
+		  SELECT "cartId" into cartId	FROM public."Cart"	
+		  Where "serviceProviderId"=serviceProviderId	AND  "customerId"=customerId;
+		  RAISE NOTICE 'output from space %', cartId;
+		END if;
+
+		--do $$
+		begin
+		RAISE NOTICE 'cart ID %', cartId;
+		--if quantity is 0 then do not insert
+		if(qty>0) then
+		 INSERT INTO public."CartDetails"("cartId", "itemId", "quantity")	VALUES (cartId, itemId, qty);
+		end if;
+		exception when others then
+		RAISE NOTICE 'Cart details exist updating qty %', qty;
+		 --if quantity is 0 then delete the entry
+		 if(qty>0) then
+		 UPDATE public."CartDetails" SET "quantity" = qty	WHERE "cartId"=cartId AND  "itemId"=itemId;
+		 else
+		 DELETE FROM public."CartDetails"  WHERE "cartId"=cartId AND  "itemId"=itemId;
+		 end if;
+		 --raise;
+		end;
+		--$$ language plpgsql;
+
+		return cartId;
+		END;
+$BODY$;
+
+ALTER FUNCTION public.cart(json)
+    OWNER TO postgres;
+
 
 
 -- PROCEDURE: public.updateOrderStatus(json)

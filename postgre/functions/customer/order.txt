@@ -1,11 +1,13 @@
+-- FUNCTION: public.order(json)
 
--- PROCEDURE: public.order(json)
+-- DROP FUNCTION public."order"(json);
 
--- DROP PROCEDURE public."order"(json);
-
-CREATE OR REPLACE function public."order"(
-	orderdetails json) returns bigint
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION public."order"(
+	orderdetails json)
+    RETURNS bigint
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
     jsonOrder json := orderDetails::json
@@ -25,25 +27,31 @@ BEGIN
 totalPrice=0;
 INSERT INTO public."Orders"(
                 "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
-                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,totalPrice , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), CURRENT_TIMESTAMP ,totalPrice , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
 --,cast(jsonOrder->>'totalPrice' as integer) 
-
   FOR i IN SELECT * FROM json_array_elements(arrayItems)
   LOOP
     RAISE NOTICE 'output from space %', i->>'itemId';
                 RAISE NOTICE 'Order Id %', orderId;
-
-              	SELECT price into itemPrice FROM public."ServiceProviderToCategoryToSubCategoryToItems"	
-				        Where  "serviceProviderID"=cast(jsonOrder->>'serviceProviderId' as integer) and  "itemID"=cast(i->>'itemId' as integer) ;
-				        subTotalPrice = itemPrice*cast(i->>'quantity' as integer);
-				        totalPrice = totalPrice + subTotalPrice ;
-
+				
+				--trial
+				SELECT price into itemPrice FROM public."ServiceProviderToCategoryToSubCategoryToItems"	
+				Where  "serviceProviderID"=cast(jsonOrder->>'serviceProviderId' as integer) and  "itemID"=cast(i->>'itemId' as integer) ;
+				subTotalPrice = itemPrice*cast(i->>'quantity' as integer);
+				totalPrice = totalPrice + subTotalPrice ;
+				-- end trial
+				
+				
                 INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
     values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),subTotalPrice);
                 
   END LOOP;
-    			--setting the actual total price to the intial dummy value
+  				--setting the actual total price to the intial dummy value
   				Update public."Orders" set "totalPrice" = totalPrice where "orderID" = orderId;
+	  	
     return orderId;
 END;
 $BODY$;
+
+ALTER FUNCTION public."order"(json)
+    OWNER TO postgres;

@@ -11,6 +11,11 @@ CREATE TABLE public."CartDetails"
         REFERENCES public."Cart" ("cartId") MATCH SIMPLE
         ON UPDATE CASCADE
         ON DELETE CASCADE
+        NOT VALID,
+    CONSTRAINT "CartDetails_Items" FOREIGN KEY ("itemId")
+        REFERENCES public."Items" ("itemID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
         NOT VALID
 )
 
