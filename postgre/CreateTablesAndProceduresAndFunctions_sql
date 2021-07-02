@@ -491,7 +491,6 @@ CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider"
     TABLESPACE pg_default;
 
 
-
 -- Table: public.Cart
 
 -- DROP TABLE public."Cart";
@@ -501,26 +500,22 @@ CREATE TABLE public."Cart"
     "cartId" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     "serviceProviderId" integer NOT NULL,
     "customerId" integer NOT NULL,
-    "cartStatus" bit(1) NOT NULL,
     "totalPrice" integer NOT NULL,
     CONSTRAINT "Cart_pkey" PRIMARY KEY ("cartId"),
     CONSTRAINT "Cart_Customer" FOREIGN KEY ("customerId")
         REFERENCES public."Customer" ("customerID") MATCH SIMPLE
         ON UPDATE CASCADE
-        ON DELETE CASCADE
-        NOT VALID,
+        ON DELETE CASCADE,
     CONSTRAINT "Cart_ServiceProvider" FOREIGN KEY ("serviceProviderId")
         REFERENCES public."ServiceProvider" ("serviceProviderID") MATCH SIMPLE
         ON UPDATE CASCADE
         ON DELETE CASCADE
-        NOT VALID
 )
 
 TABLESPACE pg_default;
 
 ALTER TABLE public."Cart"
     OWNER to postgres;
-
 
 
 -- Table: public.CartDetails
@@ -532,58 +527,97 @@ CREATE TABLE public."CartDetails"
     "cartId" integer NOT NULL,
     "itemId" integer NOT NULL,
     quantity integer NOT NULL,
+    CONSTRAINT "CartDetails_cartId_itemId_key" UNIQUE ("cartId", "itemId"),
     CONSTRAINT "CartDetails_Cart" FOREIGN KEY ("cartId")
         REFERENCES public."Cart" ("cartId") MATCH SIMPLE
         ON UPDATE CASCADE
-        ON DELETE CASCADE
-        NOT VALID,
+        ON DELETE CASCADE,
     CONSTRAINT "CartDetails_Items" FOREIGN KEY ("itemId")
         REFERENCES public."Items" ("itemID") MATCH SIMPLE
         ON UPDATE CASCADE
         ON DELETE CASCADE
-        NOT VALID
 )
 
 TABLESPACE pg_default;
 
 ALTER TABLE public."CartDetails"
     OWNER to postgres;
+	
+	
+	
+	
+-- FUNCTION: public.order(json)
 
--- Function: public.order(json)
+-- DROP FUNCTION public."order"(json);
 
--- DROP Function public."order"(json);
-
-CREATE OR REPLACE function public."order"(
-	orderdetails json) returns bigint
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION public."order"(
+	orderdetails json)
+    RETURNS bigint
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
-    jsonOrder json := orderDetails::json
-                
-                
-                ;
+    jsonOrder json := orderDetails::json  ;
   
-arrayItems json := jsonOrder->>'items';
+--arrayItems json := jsonOrder->>'items';
 
 i json;
 declare orderId bigint;
+declare itemPrice integer;
+declare subTotalPrice integer;
+declare totalPrice integer;
+declare arrayCart json;
+declare serviceProviderId integer;
+declare customerId integer;
+
 BEGIN
-
-INSERT INTO public."Orders"(
-                "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
-                VALUES ( cast(jsonOrder->>'customerId' as integer), cast(jsonOrder->>'serviceProviderId' as integer), now() ,cast(jsonOrder->>'totalPrice' as integer) , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
-
-  FOR i IN SELECT * FROM json_array_elements(arrayItems)
-  LOOP
+	serviceProviderId=cast(jsonOrder->>'serviceProviderId' as integer);
+	customerId=cast(jsonOrder->>'customerId' as integer);
+    
+	select array_to_json(array_agg(row_to_json(t))) into arrayCart from (select * from public."CartDetails") t;
+	raise notice 'arraycart %', arrayCart;
+	
+	--if cart is empty then order should not be performed and exit
+	--raise notice 'arraycart %', arrayCart.count;
+	if(0=0) then
+	
+	
+	totalPrice=0;
+	INSERT INTO public."Orders"(
+            "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
+             VALUES ( customerId,serviceProviderId, CURRENT_TIMESTAMP ,totalPrice , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+	FOR i IN SELECT * FROM json_array_elements(arrayCart)	
+	LOOP
     RAISE NOTICE 'output from space %', i->>'itemId';
                 RAISE NOTICE 'Order Id %', orderId;
-                INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
-    values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),cast(i->>'subTotalPrice' as integer));
+				
+				--calculate the subtotal of all items wit quantitiy
+				SELECT price into itemPrice FROM public."ServiceProviderToCategoryToSubCategoryToItems"	
+				Where  "serviceProviderID"=cast(jsonOrder->>'serviceProviderId' as integer) and  "itemID"=cast(i->>'itemId' as integer) ;
+				subTotalPrice = itemPrice*cast(i->>'quantity' as integer);
+				totalPrice = totalPrice + subTotalPrice ;
+				-- end 
+				
+				
+       INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
+    		values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),subTotalPrice);
                 
-  END LOOP;
+ 	 END LOOP;
+  				--setting the actual total price to the intial dummy value
+  				Update public."Orders" set "totalPrice" = totalPrice where "orderID" = orderId;
+
+				--Delete the cart
+				Delete from public."Cart" where "serviceProviderId"=serviceProviderId and "customerId"=customerId;
+	end if;
     return orderId;
 END;
 $BODY$;
+
+ALTER FUNCTION public."order"(json)
+    OWNER TO postgres;
+
+
 
 -- FUNCTION: public.cart(json)
 
@@ -656,6 +690,9 @@ $BODY$;
 
 ALTER FUNCTION public.cart(json)
     OWNER TO postgres;
+
+
+
 
 
 
