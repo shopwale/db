@@ -269,7 +269,6 @@ ALTER TABLE public."Customer"
 	
 	
 	
-	
 -- Table: public.ServiceProvider
 
 -- DROP TABLE public."ServiceProvider";
@@ -281,6 +280,7 @@ CREATE TABLE public."ServiceProvider"
     "serviceProviderName" character(50) COLLATE pg_catalog."default" NOT NULL,
     "pinCode" bigint NOT NULL,
     address character(200) COLLATE pg_catalog."default" NOT NULL,
+    "deliveryService" boolean NOT NULL DEFAULT true,
     CONSTRAINT "ServiceProvider_pkey" PRIMARY KEY ("serviceProviderID"),
     CONSTRAINT "ServiceProvider_mobileNumber_serviceProviderName_pinCode_key" UNIQUE ("mobileNumber", "serviceProviderName", "pinCode")
 )
@@ -289,7 +289,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE public."ServiceProvider"
     OWNER to postgres;
-	
 	
 	
 	
