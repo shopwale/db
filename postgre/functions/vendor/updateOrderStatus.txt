@@ -1,0 +1,64 @@
+-- FUNCTION: public.updateOrderStatus(json)
+
+-- DROP FUNCTION public."updateOrderStatus"(json);
+
+CREATE OR REPLACE FUNCTION public."updateOrderStatus"(
+	jsonorderdetails json)
+    RETURNS json
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE	jsonLatestOrderStatus json; -- template {'boolCancellable':0/1,'orderStatus':'?'}
+DECLARE	jsonOrderDetails json := jsonOrderDetails::json;
+DECLARE  latestOrderStatusId integer;
+DECLARE allowUpdate BOOLEAN;
+BEGIN
+
+SELECT "orderStatusID" into jsonLatestOrderStatus FROM public."Orders" where "orderID" = cast(jsonorderdetails->>'orderId' as integer);
+
+select row_to_json(t) into jsonLatestOrderStatus from (SELECT "Orders"."orderStatusID" "orderStatusId","OrderStatus"."orderStatusName"
+	FROM public."Orders" INNER JOIN public."OrderStatus" ON "OrderStatus"."orderStatusID" = "Orders"."orderStatusID"
+	Where "Orders"."orderID"=cast(jsonorderdetails->>'orderId' as integer)) t;
+	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusId';	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusName';
+latestOrderStatusId=CAST(jsonLatestOrderStatus->>'orderStatusId'as Integer);
+--1	"Pending     "
+--2	"Accepted    "
+--3	"InProgress  "
+--4	"Completed   "
+--5	"OutToDeliver"
+--6	"ReadyToPick "
+--7	"Cancelled   "
+--8 "Rejected "
+
+-- Rules for cancelling an Order based on the category
+ 	
+   	CASE latestOrderStatusId
+		WHEN 7 THEN
+		allowUpdate=FALSE;
+		ELSE 
+		allowUpdate=TRUE;
+	END CASE;
+   
+  --End of Rules
+
+IF(allowUpdate=TRUE) THEN
+--update the status to what is sent by the vendor
+update public."Orders" set "orderStatusID" = (SELECT "orderStatusID" FROM public."OrderStatus" where Trim("orderStatusName") = jsonOrderDetails->>'orderStatus') where "orderID" = cast(jsonOrderDetails->>'orderId' as integer);
+--jsonLatestOrderStatus should be like {'allowUpdate':1,'orderStatus':'XXXX'};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 1 as "allowUpdate",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+ELSE
+-- no update to be done and inform the user that cancel not allow 
+--create JSON {'allowCancel':0,'orderStatus':?}
+--jsonLatestOrderStatus = {'allowUpdate':0,'orderStatus':TRIM(jsonLatestOrderStatus->>'orderStatusName')};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 0 as "allowUpdate",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+END IF;
+
+return jsonLatestOrderStatus;
+END;
+$BODY$;
+
+ALTER FUNCTION public."updateOrderStatus"(json)
+    OWNER TO postgres;

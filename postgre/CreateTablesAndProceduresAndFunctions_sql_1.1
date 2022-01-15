@@ -217,32 +217,194 @@ ALTER FUNCTION public."order"(json)
     OWNER TO postgres;
 
 
+-- FUNCTION: public.cancelOrder(json)
 
+-- DROP FUNCTION public."cancelOrder"(json);
 
-
--- PROCEDURE: public.updateOrderStatus(json)
-
--- DROP PROCEDURE public."updateOrderStatus"(json);
-
-CREATE OR REPLACE PROCEDURE public."updateOrderStatus"(
-	orderdetails json)
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION public."cancelOrder"(
+	jsoncancelorder json)
+    RETURNS json
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
 AS $BODY$
-DECLARE
-    jsonOrder json := orderDetails::json;
-  
---arrayItems json := jsonOrder->>'orderId';
---arrayItems json := jsonOrder->>'orderStatus';
---i json;
---declare orderId bigint;
+DECLARE	jsonLatestOrderStatus json; -- template {'boolCancellable':0/1,'orderStatus':'?'}
+DECLARE	jsonCancelOrder json := jsonCancelOrder::json;
+DECLARE  latestOrderStatusId integer;
+DECLARE category integer;  --Meat/Grocery/Saloon etc
+DECLARE allowCancel BOOLEAN;
 BEGIN
-update public."Orders" set "orderStatusID" = (SELECT "orderStatusID" FROM public."OrderStatus" where Trim("orderStatusName") = jsonOrder->>'orderStatus') where "orderID" = cast(jsonOrder->>'orderId' as integer);
-    EXCEPTION
-        WHEN Others Then
-        
-		raise exception 'error';
-  END;
+category = cast(jsonCancelOrder->>'categoryId' as integer);
+SELECT "orderStatusID" into jsonLatestOrderStatus FROM public."Orders" where "orderID" = cast(jsonCancelOrder->>'orderId' as integer);
+
+select row_to_json(t) into jsonLatestOrderStatus from (SELECT "Orders"."orderStatusID" "orderStatusId","OrderStatus"."orderStatusName"
+	FROM public."Orders" INNER JOIN public."OrderStatus" ON "OrderStatus"."orderStatusID" = "Orders"."orderStatusID"
+	Where "Orders"."orderID"=cast(jsonCancelOrder->>'orderId' as integer)) t;
+	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusId';	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusName';
+latestOrderStatusId=CAST(jsonLatestOrderStatus->>'orderStatusId'as Integer);
+--1	"Pending     "
+--2	"Accepted    "
+--3	"Inprogress    "
+--4	"Completed   "
+--5	"OutToDeliver"
+--6	"ReadyToPick "
+--7	"Cancelled   "
+--8 "Rejected    "
+-- Rules for cancelling an Order based on the category
+
+CASE category
+   WHEN 1  THEN 
+   --Allow cancellation orderstatusID 1 2 for now
+   	
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;
+   
+   
+   WHEN 2 THEN
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   WHEN 3 THEN
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   WHEN 4 THEN
+   
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   
+   --WHEN ? add rules for new categorries or else else it will go to default
+   ELSE
+   
+      --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;
+   
+END CASE;
+
+--End of Rules
+
+IF(allowCancel=TRUE) THEN
+--update the status to cancel
+--create JSON {'allowCancel':1,'orderStatus':?}
+update public."Orders" set "orderStatusID" = 7  where "orderID" = cast(jsonCancelOrder->>'orderId' as integer);
+--jsonLatestOrderStatus should be like {'allowCancel':1,'orderStatus':'Cancelled'};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 1 as "allowCancel",'Cancelled' as "orderStatus")t;
+ELSE
+-- no update to be done and inform the user that cancel not allow 
+--create JSON {'allowCancel':0,'orderStatus':?}
+--jsonLatestOrderStatus = {'allowCancel':0,'orderStatus':TRIM(jsonLatestOrderStatus->>'orderStatusName')};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 0 as "allowCancel",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+END IF;
+
+return jsonLatestOrderStatus;
+END;
 $BODY$;
+
+ALTER FUNCTION public."cancelOrder"(json)
+    OWNER TO postgres;
+
+
+
+-- FUNCTION: public.updateOrderStatus(json)
+
+-- DROP FUNCTION public."updateOrderStatus"(json);
+
+CREATE OR REPLACE FUNCTION public."updateOrderStatus"(
+	jsonorderdetails json)
+    RETURNS json
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE	jsonLatestOrderStatus json; -- template {'boolCancellable':0/1,'orderStatus':'?'}
+DECLARE	jsonOrderDetails json := jsonOrderDetails::json;
+DECLARE  latestOrderStatusId integer;
+DECLARE allowUpdate BOOLEAN;
+BEGIN
+
+SELECT "orderStatusID" into jsonLatestOrderStatus FROM public."Orders" where "orderID" = cast(jsonorderdetails->>'orderId' as integer);
+
+select row_to_json(t) into jsonLatestOrderStatus from (SELECT "Orders"."orderStatusID" "orderStatusId","OrderStatus"."orderStatusName"
+	FROM public."Orders" INNER JOIN public."OrderStatus" ON "OrderStatus"."orderStatusID" = "Orders"."orderStatusID"
+	Where "Orders"."orderID"=cast(jsonorderdetails->>'orderId' as integer)) t;
+	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusId';	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusName';
+latestOrderStatusId=CAST(jsonLatestOrderStatus->>'orderStatusId'as Integer);
+--1	"Pending     "
+--2	"Accepted    "
+--3	"InProgress  "
+--4	"Completed   "
+--5	"OutToDeliver"
+--6	"ReadyToPick "
+--7	"Cancelled   "
+--8 "Rejected "
+
+-- Rules for cancelling an Order based on the category
+ 	
+   	CASE latestOrderStatusId
+		WHEN 7 THEN
+		allowUpdate=FALSE;
+		ELSE 
+		allowUpdate=TRUE;
+	END CASE;
+   
+  --End of Rules
+
+IF(allowUpdate=TRUE) THEN
+--update the status to what is sent by the vendor
+update public."Orders" set "orderStatusID" = (SELECT "orderStatusID" FROM public."OrderStatus" where Trim("orderStatusName") = jsonOrderDetails->>'orderStatus') where "orderID" = cast(jsonOrderDetails->>'orderId' as integer);
+--jsonLatestOrderStatus should be like {'allowUpdate':1,'orderStatus':'XXXX'};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 1 as "allowUpdate",TRIM(jsonOrderDetails->>'orderStatus') as "orderStatus")t;
+ELSE
+-- no update to be done and inform the user that cancel not allow 
+--create JSON {'allowCancel':0,'orderStatus':?}
+--jsonLatestOrderStatus = {'allowUpdate':0,'orderStatus':TRIM(jsonLatestOrderStatus->>'orderStatusName')};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 0 as "allowUpdate",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+END IF;
+
+return jsonLatestOrderStatus;
+END;
+$BODY$;
+
+ALTER FUNCTION public."updateOrderStatus"(json)
+    OWNER TO postgres;
+
 
 
 
@@ -281,6 +443,7 @@ CREATE TABLE public."ServiceProvider"
     "pinCode" bigint NOT NULL,
     address character(200) COLLATE pg_catalog."default" NOT NULL,
     "deliveryService" boolean NOT NULL DEFAULT true,
+    "serviceProviderIconURL" character(75) COLLATE pg_catalog."default",
     CONSTRAINT "ServiceProvider_pkey" PRIMARY KEY ("serviceProviderID"),
     CONSTRAINT "ServiceProvider_mobileNumber_serviceProviderName_pinCode_key" UNIQUE ("mobileNumber", "serviceProviderName", "pinCode")
 )
@@ -343,6 +506,7 @@ CREATE TABLE public."Category"
 (
     "categoryID" integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     "categoryName" character(50) COLLATE pg_catalog."default" NOT NULL,
+    "categoryIconURL" character(75) COLLATE pg_catalog."default",
     CONSTRAINT "Category_pkey" PRIMARY KEY ("categoryID")
 )
 
@@ -408,8 +572,9 @@ CREATE TABLE public."Items"
     "categoryID" integer NOT NULL,
     "subCategoryID" integer NOT NULL,
     "measurementID" integer,
+    "itemIconURL" character(75) COLLATE pg_catalog."default",
     CONSTRAINT "Items_pkey" PRIMARY KEY ("itemID"),
-    CONSTRAINT "Items_itemName_categoryID_subCategoryID_measurementID_key" UNIQUE ("itemName", "categoryID", "subCategoryID", "measurementID"),
+    CONSTRAINT "uniqueKey_cat_subCat_itemName" UNIQUE ("itemName", "categoryID", "subCategoryID"),
     CONSTRAINT "Items_MeasurementUnit" FOREIGN KEY ("measurementID")
         REFERENCES public."MeasurementUnit" ("measurementID") MATCH SIMPLE
         ON UPDATE CASCADE
@@ -652,6 +817,31 @@ CREATE INDEX "fki_OrderDetails_Orders"
     ON public."OrderDetails" USING btree
     ("orderID" ASC NULLS LAST)
     TABLESPACE pg_default;
+	
+	
+
+
+
+
+-- Table: public.OrderReminder
+
+-- DROP TABLE public."OrderReminder";
+
+CREATE TABLE public."OrderReminder"
+(
+    "orderId" integer NOT NULL,
+    "reminderTime" timestamp with time zone NOT NULL,
+    CONSTRAINT "orderReminder_orderId_fkey" FOREIGN KEY ("orderId")
+        REFERENCES public."Orders" ("orderID") MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public."OrderReminder"
+    OWNER to postgres;
 	
 	
 	
