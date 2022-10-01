@@ -1,0 +1,6 @@
+
+"C:\Program Files\PostgreSQL\14\bin\pg_dump" --file "C:\nextPhase\github\db\backup\localshopwala_backup09sep22" --host "localhost" --port "5432" --username "postgres" --verbose --format=c --blobs "localshopwala"
+
+
+
+"C:\Program Files\PostgreSQL\14\bin\pg_restore" --no-owner --username=postgres --dbname postgres --create C:\nextPhase\github\db\backup\localshopwala_backup09sep22
