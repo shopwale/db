@@ -4,3 +4,11 @@
 
 
 "C:\Program Files\PostgreSQL\14\bin\pg_restore" --no-owner --username=postgres --dbname postgres --create C:\nextPhase\github\db\backup\localshopwala_backup09sep22
+
+
+#get root user accecss
+sudo -i
+pg_dump --file /home/asif/.ssh/db/backup/db --host "localhost" --port "5432" --username "postgres" --verbose --format=c --blobs "localshopwala"
+
+
+note:the root user is used to create backup, when restoring either this or oter machine, ensure there is a user by name root in postgres

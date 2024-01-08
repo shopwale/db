@@ -1,0 +1,1887 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 14.10 (Ubuntu 14.10-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.10 (Ubuntu 14.10-0ubuntu0.22.04.1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: addItem(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."addItem"(jsonitem json) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+jsonItem json := jsonItem::json  ;
+
+DECLARE categoryId integer;
+DECLARE subCategoryId integer;
+DECLARE measurementId integer;
+DECLARE itemId integer;
+
+i json;
+DECLARE itemCount  INTEGER;
+BEGIN
+--RAISE NOTICE 'Category %', jsonItem->>'category';
+--Select "categoryID" into categoryId from "Category" where "categoryName"=jsonItem->>'category';
+
+--Select "subCategoryID" into subCategoryId from "SubCategory" where "subCategoryName"=jsonItem->>'subCategory';
+
+categoryId = jsonItem->>'categoryId';
+subCategoryId  =jsonItem->>'subCategoryId';
+SELECT "measurementID" into measurementId FROM public."MeasurementUnit" WHERE "unitOfMeasure"=jsonItem->>'unitOfMeasurement';
+
+SELECT "itemID" into itemId	FROM public."Items" where  "itemName" = TRIM(jsonItem->>'itemName') and  "categoryID"=categoryId and "subCategoryID"=subCategoryId  ;
+RAISE NOTICE 'Item Id %', itemId;
+IF(itemId IS NULL) THEN
+RAISE NOTICE 'Added new item %', itemId;
+INSERT INTO public."Items"( "itemName", "categoryID", "subCategoryID", "measurementID")
+	VALUES ( TRIM(jsonItem->>'itemName'), categoryId, subCategoryId , measurementId) returning "itemID" into itemId ;
+END IF;
+
+RETURN itemId;
+END;
+$$;
+
+
+ALTER FUNCTION public."addItem"(jsonitem json) OWNER TO root;
+
+--
+-- Name: addItemCopy(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."addItemCopy"(jsonitem json) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+jsonItem json := jsonItem::json  ;
+
+DECLARE categoryId integer;
+DECLARE subCategoryId integer;
+DECLARE measurementId integer;
+DECLARE itemId integer;
+
+i json;
+DECLARE itemCount  INTEGER;
+BEGIN
+RAISE NOTICE 'Category %', jsonItem->>'category';
+Select "categoryID" into categoryId from "Category" where "categoryName"=jsonItem->>'category';
+
+Select "subCategoryID" into subCategoryId from "SubCategory" where "subCategoryName"=jsonItem->>'subCategory';
+
+SELECT "measurementID" into measurementId FROM public."MeasurementUnit" WHERE "unitOfMeasure"=jsonItem->>'unitOfMeasurement';
+
+SELECT "itemID" into itemId	FROM public."Items" where  "itemName" = TRIM(jsonItem->>'itemName') and  "categoryID"=categoryID and "subCategoryID"=subCategoryID  ;
+RAISE NOTICE 'Item Id %', itemId;
+IF(itemId IS NULL) THEN
+RAISE NOTICE 'Added new item %', itemId;
+INSERT INTO public."Items"( "itemName", "categoryID", "subCategoryID", "measurementID")
+	VALUES ( TRIM(jsonItem->>'itemName'), categoryId, subCategoryID , measurementID) returning "itemID" into itemId ;
+END IF;
+
+RETURN itemId;
+END;
+$$;
+
+
+ALTER FUNCTION public."addItemCopy"(jsonitem json) OWNER TO root;
+
+--
+-- Name: cancelOrder(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."cancelOrder"(jsoncancelorder json) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+DECLARE	jsonLatestOrderStatus json; -- template {'boolCancellable':0/1,'orderStatus':'?'}
+DECLARE	jsonCancelOrder json := jsonCancelOrder::json;
+DECLARE  latestOrderStatusId integer;
+DECLARE category integer;  --Meat/Grocery/Saloon etc
+DECLARE allowCancel BOOLEAN;
+BEGIN
+category = cast(jsonCancelOrder->>'categoryId' as integer);
+SELECT "orderStatusID" into jsonLatestOrderStatus FROM public."Orders" where "orderID" = cast(jsonCancelOrder->>'orderId' as integer);
+
+select row_to_json(t) into jsonLatestOrderStatus from (SELECT "Orders"."orderStatusID" "orderStatusId","OrderStatus"."orderStatusName"
+	FROM public."Orders" INNER JOIN public."OrderStatus" ON "OrderStatus"."orderStatusID" = "Orders"."orderStatusID"
+	Where "Orders"."orderID"=cast(jsonCancelOrder->>'orderId' as integer)) t;
+	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusId';	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusName';
+latestOrderStatusId=CAST(jsonLatestOrderStatus->>'orderStatusId'as Integer);
+--1	"Pending     "
+--2	"Accepted    "
+--3	"Rejected    "
+--4	"Completed   "
+--5	"OutToDeliver"
+--6	"ReadyToPick "
+--7	"Cancelled   "
+
+-- Rules for cancelling an Order based on the category
+
+CASE category
+   WHEN 1  THEN 
+   --Allow cancellation orderstatusID 1 2 for now
+   	
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;
+   
+   
+   WHEN 2 THEN
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   WHEN 3 THEN
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   WHEN 4 THEN
+   
+   --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE;   
+   
+   --WHEN ? add rules for new categorries or else else it will go to default
+   ELSE
+   
+      --Allow cancellation orderstatusID 1 2 for now
+   	CASE latestOrderStatusId
+		WHEN 1 THEN
+		allowCancel=TRUE;
+		WHEN 2 THEN
+		allowCancel=TRUE;
+		ELSE 
+		allowCancel=FALSE;
+	END CASE; 
+   
+   
+END CASE;
+
+--End of Rules
+
+IF(allowCancel=TRUE) THEN
+--update the status to cancel
+--create JSON {'allowCancel':1,'orderStatus':?}
+update public."Orders" set "orderStatusID" = 7  where "orderID" = cast(jsonCancelOrder->>'orderId' as integer);
+--jsonLatestOrderStatus should be like {'allowCancel':1,'orderStatus':'Cancelled'};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 1 as "allowCancel",'Cancelled' as "orderStatus")t;
+ELSE
+-- no update to be done and inform the user that cancel not allow 
+--create JSON {'allowCancel':0,'orderStatus':?}
+--jsonLatestOrderStatus = {'allowCancel':0,'orderStatus':TRIM(jsonLatestOrderStatus->>'orderStatusName')};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 0 as "allowCancel",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+END IF;
+
+return jsonLatestOrderStatus;
+END;
+$$;
+
+
+ALTER FUNCTION public."cancelOrder"(jsoncancelorder json) OWNER TO root;
+
+--
+-- Name: cart(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public.cart(cartdetails json) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE	jsonOrder json := cartDetails::json;
+		DECLARE cartId integer;
+		DECLARE cartSize integer;
+		DECLARE serviceProviderId  integer;
+		DECLARE customerId  integer;
+		DECLARE itemId integer;
+		DECLARE qty integer;
+
+		BEGIN
+		
+		serviceProviderId = CAST(jsonOrder->>'serviceProviderId' as integer);
+		customerId= CAST(jsonOrder->>'customerId' as integer);
+		itemId=CAST(jsonOrder->>'itemId' as integer);
+		qty=CAST(jsonOrder->>'quantity' as integer);
+		
+		SELECT count("cartId") into cartSize
+				FROM public."Cart"
+				Where "serviceProviderId"=serviceProviderId
+				AND  "customerId"=customerId;
+
+		if (cartSize=0) then
+		  --statements;
+		  RAISE NOTICE 'Cart Size: %', cartSize;
+		  INSERT INTO public."Cart"("serviceProviderId", "customerId", "totalPrice")
+			VALUES ( serviceProviderId , customerId,  0) returning "cartId" into cartId ;
+			--cartId= ;
+		else
+		  --alternative-statements;
+		  RAISE NOTICE 'Cart Size: %', cartSize;
+		  --Get cartId
+		  SELECT "cartId" into cartId	FROM public."Cart"	
+		  Where "serviceProviderId"=serviceProviderId	AND  "customerId"=customerId;
+		  RAISE NOTICE 'Cart Id Generated: %', cartId;
+		END if;
+
+		--do $$
+		begin
+		RAISE NOTICE 'Quantity %', qty;
+		--if quantity is 0 then do not insert
+		--if(qty>0) then
+		RAISE NOTICE 'Inserting entry in cart details %', qty;
+		 INSERT INTO public."CartDetails"("cartId", "itemId", "quantity")	VALUES (cartId, itemId, qty);
+		--end if;
+		exception when others then
+		RAISE NOTICE 'Cart details exist updating qty %', qty;
+		 --if quantity is 0 then delete the entry
+		 if(qty>0) then
+		 UPDATE public."CartDetails" SET "quantity" = qty	WHERE "cartId"=cartId AND  "itemId"=itemId;
+		 else
+		 DELETE FROM public."CartDetails"  WHERE "cartId"=cartId AND  "itemId"=itemId;
+		 end if;
+		 --raise;
+		end;
+		--$$ language plpgsql;
+
+		return cartId;
+		END;
+$_$;
+
+
+ALTER FUNCTION public.cart(cartdetails json) OWNER TO root;
+
+--
+-- Name: generateOTP(bigint); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."generateOTP"(mobilenumber bigint) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE lastCreationTime integer;
+DECLARE otpExpiryMinutes integer;
+DECLARE otp integer;
+
+BEGIN
+
+
+otpExpiryMinutes = 2;
+
+	SELECT "OTP", Extract(EPOCH from (NOW()-public."OTP"."creationTime"))/60 "lastCreationTime" into otp,lastCreationTime
+	FROM public."OTP" where "mobileNumber"=mobilenumber;
+
+IF(lastCreationTime < otpExpiryMinutes)THEN
+-- Return the OTP otp
+
+ELSE
+--DELETE
+DELETE FROM public."OTP" where "mobileNumber"=mobilenumber;
+
+--Generate OTP
+select floor(1000 + random() * 8999) into otp; 
+
+INSERT INTO public."OTP"("mobileNumber", "OTP", "creationTime")	VALUES (mobilenumber, otp , CURRENT_TIMESTAMP);
+END IF;
+
+RETURN otp;
+END;
+$$;
+
+
+ALTER FUNCTION public."generateOTP"(mobilenumber bigint) OWNER TO root;
+
+--
+-- Name: mapItemsToServiceProvider(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."mapItemsToServiceProvider"(serviceprovideritemscatalog json) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+--declare  jsonServiceProviderItemsCatalog json := serviceProviderItemsCatalog::json  ;
+declare serviceProviderId integer;
+declare categoryId integer;
+declare subCategoryId integer;
+declare itemId integer;
+declare price integer;
+
+declare serviceProviderMobile bigint;
+declare category character(50);
+declare subCategory character(50);
+
+i json;
+DECLARE jsonServiceProviderItemsCatalog json := serviceProviderItemsCatalog::json;
+
+arrayItems json := jsonServiceProviderItemsCatalog->>'items';
+
+BEGIN
+	serviceProviderMobile=TRIM(jsonServiceProviderItemsCatalog->>'serviceProviderMobile');
+	category=TRIM(jsonServiceProviderItemsCatalog->>'category');
+	subCategory=TRIM(jsonServiceProviderItemsCatalog->>'subCategory');
+	
+	
+	SELECT "serviceProviderID" into serviceProviderId from "ServiceProvider" where "mobileNumber" = serviceProviderMobile;
+
+	Select "categoryID" into categoryId from "Category" where "categoryName"=category;
+
+	Select "subCategoryID" into subCategoryId from "SubCategory" where "subCategoryName"=subCategory;
+
+	RAISE NOTICE 'Item %', arrayItems;
+	FOR i IN SELECT * FROM json_array_elements(arrayItems)	
+	LOOP
+    RAISE NOTICE 'Item %', TRIM(i->>'itemName');
+    price= cast(i->>'price' as integer);            
+	Select "itemID" into itemId from "Items" where "itemName"=TRIM(i->>'itemName');
+
+	INSERT INTO public."ServiceProviderToItems"("serviceProviderID", "itemID",  price)
+	VALUES (serviceProviderId, itemId, price);			
+
+                
+ 	 END LOOP;
+
+    return 1;
+END;
+$$;
+
+
+ALTER FUNCTION public."mapItemsToServiceProvider"(serviceprovideritemscatalog json) OWNER TO root;
+
+--
+-- Name: order(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."order"(orderdetails json) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    jsonOrder json := orderDetails::json  ;
+  
+--arrayItems json := jsonOrder->>'items';
+
+i json;
+declare orderId bigint;
+declare itemPrice integer;
+declare subTotalPrice integer;
+declare totalPrice integer;
+declare arrayCart json;
+declare serviceProviderId integer;
+declare customerId integer;
+
+BEGIN
+	serviceProviderId=cast(jsonOrder->>'serviceProviderId' as integer);
+	customerId=cast(jsonOrder->>'customerId' as integer);
+    
+	select array_to_json(array_agg(row_to_json(t))) into arrayCart from (SELECT "CartDetails"."cartId", "itemId", quantity
+	FROM public."CartDetails" 
+	INNER JOIN "Cart" 
+	On "CartDetails"."cartId" = "Cart"."cartId"
+	WHERE "Cart"."customerId"=customerId and "Cart"."serviceProviderId"=serviceProviderId) t;
+	
+	raise notice 'arraycart %', arrayCart;
+	
+	--if cart is empty then order should not be performed and exit
+	--raise notice 'arraycart %', arrayCart.count;
+	if(0=0) then
+	
+	
+	totalPrice=0;
+	INSERT INTO public."Orders"(
+            "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID","isDeliver")
+             VALUES ( customerId,serviceProviderId, CURRENT_TIMESTAMP ,totalPrice , 1,cast(jsonOrder->>'isDeliver' as boolean)) returning "orderID" into orderId ;
+	FOR i IN SELECT * FROM json_array_elements(arrayCart)	
+	LOOP
+    RAISE NOTICE 'Item Id %', i->>'itemId';
+                RAISE NOTICE 'Order Id %', orderId;
+				
+				--calculate the subtotal of all items wit quantitiy
+				SELECT price into itemPrice FROM public."ServiceProviderToItems"	
+				Where  "serviceProviderID"=cast(jsonOrder->>'serviceProviderId' as integer) and  "itemID"=cast(i->>'itemId' as integer) ;
+				subTotalPrice = itemPrice*cast(i->>'quantity' as integer);
+				RAISE NOTICE 'Item price %', itemPrice;
+				RAISE NOTICE 'Subtotal price %', subTotalPrice;
+				totalPrice = totalPrice + subTotalPrice ;
+				RAISE NOTICE 'total price %', totalPrice;
+				-- end 
+				
+				
+       INSERT INTO public."OrderDetails"("orderID", "itemID", quantity, "subTotalPrice")
+    		values(orderId, cast(i->>'itemId' as integer), cast(i->>'quantity' as integer),subTotalPrice);
+                
+ 	 END LOOP;
+  				--setting the actual total price to the intial dummy value
+  				Update public."Orders" set "totalPrice" = totalPrice where "orderID" = orderId;
+
+				--Delete the cart
+				Delete from public."Cart" where "serviceProviderId"=serviceProviderId and "customerId"=customerId;
+	end if;
+    return orderId;
+END;
+$$;
+
+
+ALTER FUNCTION public."order"(orderdetails json) OWNER TO root;
+
+--
+-- Name: updateOrderStatus(json); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public."updateOrderStatus"(jsonorderdetails json) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+DECLARE	jsonLatestOrderStatus json; -- template {'boolCancellable':0/1,'orderStatus':'?'}
+DECLARE	jsonOrderDetails json := jsonOrderDetails::json;
+DECLARE  latestOrderStatusId integer;
+DECLARE allowUpdate BOOLEAN;
+DECLARE orderStatusIdToSet  integer;
+BEGIN
+
+SELECT "orderStatusID" into jsonLatestOrderStatus FROM public."Orders" where "orderID" = cast(jsonorderdetails->>'orderId' as integer);
+
+select row_to_json(t) into jsonLatestOrderStatus from (SELECT "Orders"."orderStatusID" "orderStatusId","OrderStatus"."orderStatusName"
+	FROM public."Orders" INNER JOIN public."OrderStatus" ON "OrderStatus"."orderStatusID" = "Orders"."orderStatusID"
+	Where "Orders"."orderID"=cast(jsonorderdetails->>'orderId' as integer)) t;
+	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusId';	
+raise notice 'jsonLatestOrderStatus: %', jsonLatestOrderStatus->>'orderStatusName';
+latestOrderStatusId=CAST(jsonLatestOrderStatus->>'orderStatusId'as Integer);
+--1	"Pending     "
+--2	"Accepted    "
+--3	"InProgress  "
+--4	"Completed   "
+--5	"OutToDeliver"
+--6	"ReadyToPick "
+--7	"Cancelled   "
+--8 "Rejected "
+
+-- Rules for cancelling an Order based on the category
+ 	
+   	CASE latestOrderStatusId
+		WHEN 7 THEN
+		allowUpdate=FALSE;
+		ELSE 
+		allowUpdate=TRUE;
+	END CASE;
+   
+  --End of Rules
+
+IF(allowUpdate=TRUE) THEN
+--update the status to what is sent by the vendor
+SELECT "orderStatusID" into orderStatusIdToSet FROM public."OrderStatus" where Trim("orderStatusName") = jsonOrderDetails->>'orderStatus';
+update public."Orders" set "orderStatusID" = orderStatusIdToSet where "orderID" = cast(jsonOrderDetails->>'orderId' as integer);
+--jsonLatestOrderStatus should be like {'allowUpdate':1,'orderStatus':'XXXX'};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 1 as "allowUpdate",TRIM(jsonOrderDetails->>'orderStatus') as "orderStatus")t;
+
+--to keep track of time between status changes
+--INSERT INTO public."OrderReminder"("orderId", "reminderTime", "forStatusId")VALUES (cast(jsonOrderDetails->>'orderId' as integer), CURRENT_TIMESTAMP, orderStatusIdToSet);
+INSERT INTO public."OrderStatusTimeChanges"("orderId", "orderStatusId", "timeOfStatusChange") VALUES (cast(jsonOrderDetails->>'orderId' as integer), orderStatusIdToSet, CURRENT_TIMESTAMP);
+ELSE
+-- no update to be done and inform the user that cancel not allow 
+--create JSON {'allowCancel':0,'orderStatus':?}
+--jsonLatestOrderStatus = {'allowUpdate':0,'orderStatus':TRIM(jsonLatestOrderStatus->>'orderStatusName')};
+select row_to_json(t) into jsonLatestOrderStatus  from (select 0 as "allowUpdate",TRIM(jsonLatestOrderStatus->>'orderStatusName') as "orderStatus")t;
+END IF;
+
+return jsonLatestOrderStatus;
+END;
+$$;
+
+
+ALTER FUNCTION public."updateOrderStatus"(jsonorderdetails json) OWNER TO root;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: Cart; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Cart" (
+    "cartId" integer NOT NULL,
+    "serviceProviderId" integer NOT NULL,
+    "customerId" integer NOT NULL,
+    "totalPrice" integer NOT NULL
+);
+
+
+ALTER TABLE public."Cart" OWNER TO root;
+
+--
+-- Name: CartDetails; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."CartDetails" (
+    "cartId" integer NOT NULL,
+    "itemId" integer NOT NULL,
+    quantity integer NOT NULL
+);
+
+
+ALTER TABLE public."CartDetails" OWNER TO root;
+
+--
+-- Name: Cart_cartId_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Cart" ALTER COLUMN "cartId" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Cart_cartId_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: Category; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Category" (
+    "categoryID" integer NOT NULL,
+    "categoryName" character(50) NOT NULL,
+    "categoryIconURL" character(75)
+);
+
+
+ALTER TABLE public."Category" OWNER TO root;
+
+--
+-- Name: Category_categoryID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Category" ALTER COLUMN "categoryID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Category_categoryID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: Customer; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Customer" (
+    "customerID" integer NOT NULL,
+    "mobileNumber" bigint NOT NULL,
+    "customerName" character(50) NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) NOT NULL,
+    status integer DEFAULT 4 NOT NULL,
+    "lastName" character(50)
+);
+
+
+ALTER TABLE public."Customer" OWNER TO root;
+
+--
+-- Name: COLUMN "Customer".status; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public."Customer".status IS 'User''s status';
+
+
+--
+-- Name: CustomerStatus; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."CustomerStatus" (
+    id integer NOT NULL,
+    description character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public."CustomerStatus" OWNER TO root;
+
+--
+-- Name: TABLE "CustomerStatus"; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON TABLE public."CustomerStatus" IS 'Table for maintaining user status ';
+
+
+--
+-- Name: CustomerToServiceProvider; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."CustomerToServiceProvider" (
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL
+);
+
+
+ALTER TABLE public."CustomerToServiceProvider" OWNER TO root;
+
+--
+-- Name: Customer_customerID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Customer" ALTER COLUMN "customerID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Customer_customerID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: DisplayMessages; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."DisplayMessages" (
+    "messageId" integer NOT NULL,
+    message character varying(800) NOT NULL,
+    "videoUrl" character varying(300),
+    "redirectToUrl" character varying(20),
+    "Target" character varying(100)
+);
+
+
+ALTER TABLE public."DisplayMessages" OWNER TO root;
+
+--
+-- Name: FcmTokenCustomer; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."FcmTokenCustomer" (
+    "customerID" integer NOT NULL,
+    "fcmToken" character varying(255) NOT NULL
+);
+
+
+ALTER TABLE public."FcmTokenCustomer" OWNER TO root;
+
+--
+-- Name: FcmTokenServiceProvider; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."FcmTokenServiceProvider" (
+    "serviceProviderID" integer NOT NULL,
+    "fcmToken" character varying(255) NOT NULL
+);
+
+
+ALTER TABLE public."FcmTokenServiceProvider" OWNER TO root;
+
+--
+-- Name: ItemToSubItems; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."ItemToSubItems" (
+    "itemId" integer NOT NULL,
+    "subItemId" integer NOT NULL
+);
+
+
+ALTER TABLE public."ItemToSubItems" OWNER TO root;
+
+--
+-- Name: ItemToTags; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."ItemToTags" (
+    "itemID" integer NOT NULL,
+    "tagID" integer NOT NULL
+);
+
+
+ALTER TABLE public."ItemToTags" OWNER TO root;
+
+--
+-- Name: Items; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Items" (
+    "itemID" integer NOT NULL,
+    "itemName" character(50) NOT NULL,
+    "categoryID" integer NOT NULL,
+    "subCategoryID" integer NOT NULL,
+    "measurementID" integer NOT NULL,
+    "itemIconURL" character(75)
+);
+
+
+ALTER TABLE public."Items" OWNER TO root;
+
+--
+-- Name: Items_itemID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Items" ALTER COLUMN "itemID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Items_itemID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: MeasurementUnit; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."MeasurementUnit" (
+    "measurementID" integer NOT NULL,
+    "unitOfMeasure" character(10) NOT NULL
+);
+
+
+ALTER TABLE public."MeasurementUnit" OWNER TO root;
+
+--
+-- Name: MeasurementUnit_measurementID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."MeasurementUnit" ALTER COLUMN "measurementID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."MeasurementUnit_measurementID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: OTP; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."OTP" (
+    "mobileNumber" bigint NOT NULL,
+    "OTP" integer,
+    "creationTime" timestamp with time zone
+);
+
+
+ALTER TABLE public."OTP" OWNER TO root;
+
+--
+-- Name: OrderDetails; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."OrderDetails" (
+    "orderID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    quantity integer NOT NULL,
+    "subTotalPrice" integer NOT NULL
+);
+
+
+ALTER TABLE public."OrderDetails" OWNER TO root;
+
+--
+-- Name: OrderReminder; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."OrderReminder" (
+    "orderId" integer NOT NULL,
+    "reminderTime" timestamp with time zone NOT NULL,
+    "forStatusId" integer NOT NULL
+);
+
+
+ALTER TABLE public."OrderReminder" OWNER TO root;
+
+--
+-- Name: OrderStatus; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."OrderStatus" (
+    "orderStatusID" integer NOT NULL,
+    "orderStatusName" character(12) NOT NULL
+);
+
+
+ALTER TABLE public."OrderStatus" OWNER TO root;
+
+--
+-- Name: OrderStatusTimeChanges; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."OrderStatusTimeChanges" (
+    "orderId" integer NOT NULL,
+    "orderStatusId" integer NOT NULL,
+    "timeOfStatusChange" timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public."OrderStatusTimeChanges" OWNER TO root;
+
+--
+-- Name: OrderStatus_orderStatusID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."OrderStatus" ALTER COLUMN "orderStatusID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."OrderStatus_orderStatusID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: Orders; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Orders" (
+    "orderID" integer NOT NULL,
+    "customerID" integer NOT NULL,
+    "serviceProviderID" integer NOT NULL,
+    "orderDate" timestamp with time zone NOT NULL,
+    "totalPrice" integer NOT NULL,
+    "orderStatusID" integer NOT NULL,
+    "isDeliver" boolean NOT NULL
+);
+
+
+ALTER TABLE public."Orders" OWNER TO root;
+
+--
+-- Name: Orders_orderID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Orders" ALTER COLUMN "orderID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Orders_orderID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: ServiceProvider; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."ServiceProvider" (
+    "serviceProviderID" integer NOT NULL,
+    "mobileNumber" bigint NOT NULL,
+    "serviceProviderName" character(50) NOT NULL,
+    "pinCode" bigint NOT NULL,
+    address character(200) NOT NULL,
+    "deliveryService" boolean DEFAULT true NOT NULL,
+    "serviceProviderIconURL" character(75),
+    "businessId" character(10),
+    "registrationDate" timestamp without time zone,
+    coordinates character(50)
+);
+
+
+ALTER TABLE public."ServiceProvider" OWNER TO root;
+
+--
+-- Name: ServiceProviderToItems; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."ServiceProviderToItems" (
+    "serviceProviderID" integer NOT NULL,
+    "itemID" integer NOT NULL,
+    price integer NOT NULL
+);
+
+
+ALTER TABLE public."ServiceProviderToItems" OWNER TO root;
+
+--
+-- Name: ServiceProvider_serviceProviderID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."ServiceProvider" ALTER COLUMN "serviceProviderID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."ServiceProvider_serviceProviderID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: SubCategory; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."SubCategory" (
+    "subCategoryID" integer NOT NULL,
+    "subCategoryName" character(50) NOT NULL,
+    "categoryID" integer NOT NULL
+);
+
+
+ALTER TABLE public."SubCategory" OWNER TO root;
+
+--
+-- Name: SubCategory_subCategoryID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."SubCategory" ALTER COLUMN "subCategoryID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."SubCategory_subCategoryID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: Tags; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public."Tags" (
+    "tagID" integer NOT NULL,
+    "tagName" character(15) NOT NULL
+);
+
+
+ALTER TABLE public."Tags" OWNER TO root;
+
+--
+-- Name: Tags_tagID_seq; Type: SEQUENCE; Schema: public; Owner: root
+--
+
+ALTER TABLE public."Tags" ALTER COLUMN "tagID" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."Tags_tagID_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Data for Name: Cart; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Cart" ("cartId", "serviceProviderId", "customerId", "totalPrice") FROM stdin;
+\.
+
+
+--
+-- Data for Name: CartDetails; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."CartDetails" ("cartId", "itemId", quantity) FROM stdin;
+\.
+
+
+--
+-- Data for Name: Category; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Category" ("categoryID", "categoryName", "categoryIconURL") FROM stdin;
+1	Grocery                                           	icons/cat/grocery.png                                                      
+2	Medicines                                         	icons/cat/medicine.png                                                     
+3	Meat                                              	icons/cat/meat.png                                                         
+4	Saloon                                            	icons/cat/saloon.png                                                       
+5	Restaurant                                        	icons/cat/restaurant.png                                                   
+\.
+
+
+--
+-- Data for Name: Customer; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Customer" ("customerID", "mobileNumber", "customerName", "pinCode", address, status, "lastName") FROM stdin;
+\.
+
+
+--
+-- Data for Name: CustomerStatus; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."CustomerStatus" (id, description) FROM stdin;
+1	active
+2	inactive
+3	deleted
+4	pendingOtpConfirmation
+\.
+
+
+--
+-- Data for Name: CustomerToServiceProvider; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."CustomerToServiceProvider" ("customerID", "serviceProviderID") FROM stdin;
+\.
+
+
+--
+-- Data for Name: DisplayMessages; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."DisplayMessages" ("messageId", message, "videoUrl", "redirectToUrl", "Target") FROM stdin;
+4	Whats this for...i dont rememeber	https://www.youtube.com/embed/75wKEV209I0		
+1	<p>Dear User, </p><p>Go Hyperlocal with LocalGenie, a platform to support local ecosystem.</p><p><a href="https://localgenie.in/register?url=/">Register</a></p><p>Watch the video to know more...</p>	https://www.youtube.com/embed/75wKEV209I0	\N	Unknown User trying to login on parent site
+5	<p>Dear User, </p><p>Go Hyperlocal with LocalGenie, a platform to support local ecosystem. Watch the video to know more...</p><p><a href='sourceURL'>Register</a></p>\n	https://www.youtube.com/embed/75wKEV209I0		unknown user logging through a vendor QR code
+3	<p>Dear <user> </p>\n<p>Welcome to <Vendor>,</p>\n<p>You can now start using our services, looking forward to serving your needs.</p><p>At your service,</p>\n<p><vendor></p>\n<p><small>powered by LocalGenie <small></p>	https://www.youtube.com/embed/75wKEV209I0	\N	Existing customer mapped to new SP
+2	<p style="color:Orange"><b>Welcome to Local Genie!</b></p>\n<p>Please scan the QR Code of your local business to start enjoying their services online<p><p>If your local service is not on Local Genie platform yet, please ask to reach out to <li><a  style color="blue" href="mailto:support@localgenie.in">support@localgenie.in</a></li>	https://www.youtube.com/embed/75wKEV209I0	\N	New Customer with no Mapping to Service
+6	<p>You are not subscribed to <b>{{CATEGORY}}</b> services, please scan the QR code of your preferred local  service to get started!</p>\n<p>Or</p>\n<p>If QR code is not available for your preferred local service, please ask your local service to reach out to us for getting onboarded and start offering their services online to you !</p>\n<p><b>Contact</b></p>\n<p>Email:<a href = "mailto: support@localgenie.in?subject=Onboarding enquiry!">support@localgenie.in</a></p>\n<p>Phone:<a href="tel:+91 807 964 1903" >+91 807 964 1903</a></p>			customer not subscribed service provider for given category
+\.
+
+
+--
+-- Data for Name: FcmTokenCustomer; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."FcmTokenCustomer" ("customerID", "fcmToken") FROM stdin;
+\.
+
+
+--
+-- Data for Name: FcmTokenServiceProvider; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."FcmTokenServiceProvider" ("serviceProviderID", "fcmToken") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ItemToSubItems; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."ItemToSubItems" ("itemId", "subItemId") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ItemToTags; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."ItemToTags" ("itemID", "tagID") FROM stdin;
+\.
+
+
+--
+-- Data for Name: Items; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Items" ("itemID", "itemName", "categoryID", "subCategoryID", "measurementID", "itemIconURL") FROM stdin;
+1	fakeItemGrocery                                   	1	1	1	\N
+2	fakeItemMedicines                                 	2	2	1	\N
+3	fakeItemMeat                                      	3	3	1	\N
+4	fakeItemSaloon                                    	4	4	1	\N
+5	fakeItemRestaurant                                	5	5	1	\N
+\.
+
+
+--
+-- Data for Name: MeasurementUnit; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."MeasurementUnit" ("measurementID", "unitOfMeasure") FROM stdin;
+1	KG        
+3	LTR       
+2	PIECES    
+\.
+
+
+--
+-- Data for Name: OTP; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."OTP" ("mobileNumber", "OTP", "creationTime") FROM stdin;
+919980821094	6526	2022-07-01 06:39:20.789043+05:30
+919999999999	8292	2022-09-27 08:23:47.011124+05:30
+919972887466	6562	2022-10-01 10:52:26.238069+05:30
+919092838382	4014	2022-07-23 21:00:42.948673+05:30
+919888988999	1919	2022-08-08 19:35:32.84239+05:30
+919845464644	9245	2022-08-09 11:56:15.245808+05:30
+919845464490	2343	2022-08-09 12:16:33.012286+05:30
+919620718004	6653	2022-08-09 13:07:04.71564+05:30
+917777777777	2933	2022-08-09 16:57:31.751775+05:30
+917090089114	8913	2022-08-09 16:58:34.113718+05:30
+919845464474	6904	2022-08-14 13:50:51.692011+05:30
+919964305313	3203	2022-08-14 13:51:38.30723+05:30
+919945779035	3134	2022-08-20 18:18:36.191143+05:30
+919846464646	6293	2022-08-21 19:57:24.55246+05:30
+919846464642	7734	2022-08-21 19:58:29.525141+05:30
+911231231123	2775	2022-08-21 20:07:05.498374+05:30
+919999312311	1886	2022-08-21 20:45:16.054296+05:30
+919838333333	6709	2022-08-21 20:46:13.845543+05:30
+9845464494	9829	2022-06-25 11:47:55.6873+05:30
+919964305333	2568	2022-08-23 19:58:03.544355+05:30
+919828282822	2105	2022-08-26 22:57:05.963259+05:30
+919845464492	1937	2022-08-26 23:03:22.375106+05:30
+919845352277	1169	2022-06-27 23:03:52.296877+05:30
+919845464493	2742	2022-08-26 23:08:08.391189+05:30
+9972887466	7184	2022-06-29 22:52:37.756472+05:30
+919972887465	7686	2022-08-27 23:21:40.355571+05:30
+919845464494	6452	2022-08-27 23:37:53.885924+05:30
+911231231231	9360	2022-08-31 21:16:19.624789+05:30
+919845464411	2223	2022-08-31 21:31:15.394315+05:30
+919972776655	6973	2022-09-01 23:31:27.371036+05:30
+918877677889	8729	2022-09-02 00:36:03.972599+05:30
+919972887455	1061	2022-09-02 11:15:25.188341+05:30
+918951219785	8267	2022-09-03 11:47:33.594427+05:30
+919986609577	1375	2022-09-12 10:22:16.676588+05:30
+919448275436	6583	2022-09-19 19:14:02.944007+05:30
+918746910536	3292	2022-09-23 16:52:48.661049+05:30
+\.
+
+
+--
+-- Data for Name: OrderDetails; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."OrderDetails" ("orderID", "itemID", quantity, "subTotalPrice") FROM stdin;
+\.
+
+
+--
+-- Data for Name: OrderReminder; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."OrderReminder" ("orderId", "reminderTime", "forStatusId") FROM stdin;
+\.
+
+
+--
+-- Data for Name: OrderStatus; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."OrderStatus" ("orderStatusID", "orderStatusName") FROM stdin;
+1	Pending     
+2	Accepted    
+4	Completed   
+5	OutToDeliver
+6	ReadyToPick 
+7	Cancelled   
+3	InProgress  
+8	Rejected    
+\.
+
+
+--
+-- Data for Name: OrderStatusTimeChanges; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."OrderStatusTimeChanges" ("orderId", "orderStatusId", "timeOfStatusChange") FROM stdin;
+\.
+
+
+--
+-- Data for Name: Orders; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Orders" ("orderID", "customerID", "serviceProviderID", "orderDate", "totalPrice", "orderStatusID", "isDeliver") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ServiceProvider; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."ServiceProvider" ("serviceProviderID", "mobileNumber", "serviceProviderName", "pinCode", address, "deliveryService", "serviceProviderIconURL", "businessId", "registrationDate", coordinates) FROM stdin;
+1	9972887466	Choice Home Needs                                 	560076	3rd Main Lake city, Kodichikanahalli, Bangalore                                                                                                                                                         	t	icons/sp/local-store.png                                                   	\N	2023-12-05 00:12:50.801	\N
+2	9900329935	Noor Al-Halaal Chicken                            	560076	Kodichikkanahalli, Bangalore                                                                                                                                                                            	t	icons/sp/local-store.png                                                   	\N	2023-12-05 00:29:11.064	\N
+3	9743763750	Udaya Stores                                      	560076	Kodichikkanahalli                                                                                                                                                                                       	t	icons/sp/local-store.png                                                   	\N	2023-12-05 08:00:50.609	\N
+4	9739160231	Tikka Kebaab                                      	560076	Manjunath Complex, Kaveri Nagar, Deverachikanahalli Main road, Bommanahalli                                                                                                                             	t	icons/sp/local-store.png                                                   	\N	2023-12-05 08:03:39.596	\N
+5	8210434032	Sarvan Pan Shop                                   	560076	Behind Bhagya Grand Hotel, Vijaya Bank Layout                                                                                                                                                           	t	icons/sp/local-store.png                                                   	\N	2023-12-05 08:05:36.485	\N
+6	9986575697	Adda The Restaurant                               	560076	35/4 Devarachilkkanahalli Main Rd,Hongasandra                                                                                                                                                           	t	icons/sp/local-store.png                                                   	\N	2023-12-05 10:39:52.745	\N
+7	8050416628	S.S. BIRYANI ZONE                                 	560068	Kodichikkanahalli,Main Rd,Kaveri Nagar,Bommanahalli                                                                                                                                                     	t	icons/sp/local-store.png                                                   	\N	2023-12-05 14:21:47.357	\N
+8	9945341677	Sri Dev Samosa Stall                              	560076	#8, kodichikkanahalli Bus Stand, Near Kaveri Water Tank                                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-05 14:56:12.867	\N
+9	9845338619	HAJI MUTTON CHICKEN AND FISH STALLL               	560076	Kodichikkanahalli Main Rd, Kaveri Nagar, Bommanahalli                                                                                                                                                   	t	icons/sp/local-store.png                                                   	\N	2023-12-05 17:34:24.383	\N
+10	8217310403	BISMILLAH BIRIYANI KABAB CENTER                   	560076	Kodichikkanahalli Main Rd, Near Srushti Hospital, Bommanahalli                                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-05 19:19:59.283	\N
+12	6363552135	SHUDHAKALPA                                       	560076	Vijaya Bank Enclave Rd, Anugraha Layout                                                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-06 12:01:29.137	VJW6+X9Q                                          
+13	9663605186	Cake House 24/7                                   	560076	5th Cross Road , Kutapa Garden, Vijaya Bank Layout                                                                                                                                                      	t	icons/sp/local-store.png                                                   	\N	2023-12-06 12:08:29.533	VJW6+86V                                          
+14	9844141291	Shree Lakshmi Venkateshwra Chicken Center         	560076	Kodichikkanahalli Main road, Near Srushti Hospital,Bommanahalli                                                                                                                                         	t	icons/sp/local-store.png                                                   	\N	2023-12-06 14:12:19.022	VJXC+33X                                          
+15	9739634422	Gowdru Mane Mudde Oota                            	560076	Kodichikkanahalli Main Road, Near Srushti Hospital,Bommanahalli                                                                                                                                         	t	icons/sp/local-store.png                                                   	\N	2023-12-06 14:18:05.514	7J4VVJXC+58                                       
+16	9008684788	Ayengars Ammas Pastries                           	560068	54, Kodichikknahalli                                                                                                                                                                                    	t	icons/sp/local-store.png                                                   	\N	2023-12-06 14:24:53.718	VJX9+7PH                                          
+17	9986953643	Mane Rotti                                        	560076	1st Main Rd, Royal Residency Layout - BTM 4th stg, Royal Residency Layout, Hulimavu                                                                                                                     	t	icons/sp/local-store.png                                                   	\N	2023-12-07 13:12:17.924	VJM6+95C                                          
+18	8495010001	Eat n Pack Grill Expert                           	560076	Sir M. Visvesvaraya Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-07 13:22:03.841	VJQ6+868                                          
+19	9118412092	Shree Sai Super Hot Chips                         	560068	Vijayasree Layout, kodichikkanahalli                                                                                                                                                                    	t	icons/sp/local-store.png                                                   	\N	2023-12-07 19:05:42.671	VJX9+Q8J                                          
+20	8217807039	Udupi Grand Veg                                   	560068	29, 1st Main Rd, Kodichikknahalli, Lake City, Bommanahalli                                                                                                                                              	t	icons/sp/local-store.png                                                   	\N	2023-12-07 19:10:08.592	VJX9+872                                          
+21	9538630554	IYENGARS BAKERY                                   	560068	25-23, Kodichikkanahalli Main Rd, Kodichikknahalli, Rotary Nagar, Bommanahalli                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-07 19:15:03.402	VJX9+59C                                          
+22	9743081258	Balaji Rice Traders                               	560076	#5,30/1A,2 Main, Kodichikkanahalli Main Road, Rotary Nagara,Oppo.BWSSB Water Tank                                                                                                                       	t	icons/sp/local-store.png                                                   	\N	2023-12-08 15:24:53.186	VJX9+5W2                                          
+23	9035066066	SRI BHAGYA GRAND                                  	560076	#1065/A,5th Cross,13th Main, Vijaya Bank Layout, kodichikkanahalli,Oppo. Vijaya Enclave Apts.                                                                                                           	t	icons/sp/local-store.png                                                   	\N	2023-12-09 09:53:37.415	VJV6+HC4                                          
+25	9886288890	Bread Crumbs Bakery                               	560076	989, Ambika Corner, Sir M. Visvesvaraya Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                             	t	icons/sp/local-store.png                                                   	\N	2023-12-09 14:28:46.475	VJR6+WFX                                          
+26	9035655201	Om Sweets Chats & Juice                           	560076	Sir M. Visvesvaraya Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-09 14:14:24.946	VJR6+XH9                                          
+27	9606158800	Shree Annapoorna Traders                          	560076	 Bannerghatta Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                                       	t	icons/sp/local-store.png                                                   	\N	2023-12-09 14:49:42.741	VJR6+X34                                          
+29	7349460900	Namana Garden Veg Restaurant                      	560076	910, 5th Cross Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                                      	t	icons/sp/local-store.png                                                   	\N	2023-12-09 14:42:57.189	VJR6+X34                                          
+31	9611911066	Ambara Gardenia                                   	560076	14th Main Road, 6th Cross Rd, Gangaparameshwari Nagar, Kodichikknahalli, Vijaya Bank Layout, Bilekahalli                                                                                                	t	icons/sp/local-store.png                                                   	\N	2023-12-09 14:59:18.605	VJV6+JCQ                                          
+32	8618408635	Fresh Greens                                      	560076	Vijaya Bank Enclave Rd, Anugraha Layout, Sambhawa Naggapa Layout                                                                                                                                        	t	icons/sp/local-store.png                                                   	\N	2023-12-09 15:04:45.419	VJX6+392                                          
+33	8971666158	Welcome Poultry                                   	560076	Virat Nagar , Near Muhajir Masjid                                                                                                                                                                       	t	icons/sp/local-store.png                                                   	\N	2023-12-09 15:06:18.427	WJ2C+RV4                                          
+34	9480863810	Sri Chamundeshwari Fruits And Vegetables          	560068	29, 1st Main Rd, Kodichikknahalli, Lake City, Bommanahalli                                                                                                                                              	t	icons/sp/local-store.png                                                   	\N	2023-12-09 15:12:18.437	VJX9+C6M                                          
+35	9341891174	M.N Sugarcane Juice Center                        	560076	#31/A,Venkatappa Building, Next To Udupi Grand Veg, Kodichikkanahalli Bus Stop                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-11 12:10:41.384	VJX9+66W                                          
+36	9079337681	D N D Pani Puri                                   	560076	25-23, Kodichikkanahalli Main Rd, Kodichikknahalli, Rotary Nagar, Bommanahalli                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-11 12:14:42.186	VJX9+785                                          
+37	9538353735	Udaya Super Mart                                  	560076	1, Manjunatha Layout, Kodichikknahalli, Seenappa Layout, Bommanahalli                                                                                                                                   	t	icons/sp/local-store.png                                                   	\N	2023-12-11 12:17:24.862	VJX9+788                                          
+38	8197508648	Choi Choi Momos                                   	560068	18, 12th A Main Rd, Kaveri Nagar, Bommanahalli                                                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-12 15:02:04.673	WJ2F+52V                                          
+39	9742411751	Hasanbha Iyengars Cake mane                       	560068	Kaveri Nagar, Bommanahalli                                                                                                                                                                              	t	icons/sp/local-store.png                                                   	\N	2023-12-12 15:06:04.897	VJXC+QR2                                          
+40	9738831915	Bairava Chicken Center                            	560068	14-195, 6th Main Rd, Kaveri Nagar, Hongasandra                                                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-12 15:11:32.777	VJXC+MQ7                                          
+41	8884422070	Mangala Bhavana                                   	560068	Devarachikkanahalli Main Rd, Kaveri Nagar, Bommanahalli                                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-12 15:19:41.63	VJXC+JQ9                                          
+42	7337719991	My Chicken And More                               	560068	1, Kodichikkanahalli Main Rd, next to HP Petrol Bunk, Kodichikknahalli, Kaveri Nagar, Bommanahalli                                                                                                      	t	icons/sp/local-store.png                                                   	\N	2023-12-12 15:24:56.824	VJXC+3FJ                                          
+43	87469940700	Iyengars Bakery                                   	560078	25-23, Kodichikkanahalli Main Rd, Kodichikknahalli, Rotary Nagar, Bommanahalli                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-12 21:48:47.661	VJX9+48P                                          
+44	7204163150	Ayengars Cake Palace                              	560068	4th Cross, Begur Rd, Kodichikknahalli                                                                                                                                                                   	t	icons/sp/local-store.png                                                   	\N	2023-12-13 15:15:47.296	VJXC+3JX                                          
+45	9980859984	Bismillah Hotel                                   	560076	Devarachikkanahalli Main Rd, Seenappa Layout, BDA Layout BTM 4th Stage                                                                                                                                  	t	icons/sp/local-store.png                                                   	\N	2023-12-13 15:19:00.055	VJXC+2F4                                          
+46	9844463838	Moghul Tasty                                      	560068	1 Main Road, Devara Chikkanahalli Main Road, Hongasandra                                                                                                                                                	t	icons/sp/local-store.png                                                   	\N	2023-12-13 15:22:18.074	VJWC+QFC                                          
+47	9538829140	Sai Jagannath Food And Chats Point                	560068	13, Devarachikkanahalli Main Rd, SR Naidu Layout, Seenappa Layout, Hongasandra                                                                                                                          	t	icons/sp/local-store.png                                                   	\N	2023-12-13 15:35:48.516	VJVC+V46                                          
+48	7892972134	Spice Garden                                      	560068	Devarachikkanahalli Main Rd, Maruthi Layout, Seenappa Layout, Bommanahalli                                                                                                                              	t	icons/sp/local-store.png                                                   	\N	2023-12-13 15:28:51.232	VJWC+24H                                          
+49	9731274140	True Love Cafe                                    	560068	Devarachikkanahalli Main Road, Near Royal Legend Apartment,Bommanahalli                                                                                                                                 	t	icons/sp/local-store.png                                                   	\N	2023-12-14 14:39:57.823	WJ2C+4XG                                          
+57	9380577971	Kulfi shulfi                                      	560068	 Devarachikkanahalli Main Rd, Maruthi Layout, Seenappa Layout, Bommanahalli, Bengaluru                                                                                                                  	t	icons/sp/local-store.png                                                   	\N	2023-12-14 14:48:38.863	VJWC+44                                           
+58	8088770964	Savi Ruchi Pan shop                               	560068	Devarachikkanahalli Main Rd, Maruthi Layout, Seenappa Layout, Bommanahalli, Bengaluru                                                                                                                   	t	icons/sp/local-store.png                                                   	\N	2023-12-14 14:50:17.242	VJWC+44M                                          
+59	9066556544	Cake Beats                                        	560076	10, Devarachikkanahalli Main Rd, near golden park appts, opposite surani saw mill, Maruthi Layout, Seenappa Layout, Hongasandra                                                                         	t	icons/sp/local-store.png                                                   	\N	2023-12-15 16:00:01.54	VJVC+M2H                                          
+60	9738279028	Kolkatta Famous Kathi roll                        	560078	4th Cross Rd, 1st Block, Royal Shelters, DUO Layout, Bilekahalli                                                                                                                                        	t	icons/sp/local-store.png                                                   	\N	2023-12-15 16:06:09.894	VJV7+285                                          
+61	9740022666	New Kabab Zone                                    	560076	#1057,Devarachikkanahalli Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                           	t	icons/sp/local-store.png                                                   	\N	2023-12-15 16:12:59.214	VJV5+QQ2                                          
+62	9880608963	Kanti Sweets                                      	560076	Near The Hair Cafe - Family Salon, 368, near BBMP Office, Vijaya Bank Layout, Bilekahalli                                                                                                               	t	icons/sp/local-store.png                                                   	\N	2023-12-15 16:17:45.998	VJV5+XMG                                          
+64	9449159057	Chikkamagalur Tea And Coffee Works                	560068	Devarachikkanahalli Main Rd, Bommanahalli                                                                                                                                                               	t	icons/sp/local-store.png                                                   	\N	2023-12-18 16:52:31.925	WJ3F+3JC                                          
+65	9663532652	Al Falah Kabab counter                            	560068	30, 9th Main Rd, Bommanahalli                                                                                                                                                                           	t	icons/sp/local-store.png                                                   	\N	2023-12-18 16:56:03.997	WJ3F+W57                                          
+66	9731230615	Shree Kanishka Sweets and Snacks                  	560068	21, 14th Main Rd, Virat Nagar, Bommanahalli                                                                                                                                                             	t	icons/sp/local-store.png                                                   	\N	2023-12-18 16:58:22.955	WJ4F+55G                                          
+67	9449671918	Coorg Spices                                      	560068	404, 13th Cross Rd, Roopena Agrahara, Bommanahalli                                                                                                                                                      	t	icons/sp/local-store.png                                                   	\N	2023-12-18 17:01:00.919	WJ4F+M4G                                          
+68	9449110786	AM Chicken Center                                 	560068	404, 13th Cross Rd, Roopena Agrahara, Bommanahalli                                                                                                                                                      	t	icons/sp/local-store.png                                                   	\N	2023-12-18 17:02:14.147	WJ4F+M4G                                          
+63	9663545678	Tender Fresh chicken                              	560078	 Bhavani food corner, E Main Rd, Vijaya Bank Layout, Bilekahalli                                                                                                                                        	t	icons/sp/local-store.png                                                   	\N	2023-12-15 16:20:10.833	VJW5+3G5                                          
+69	9886942033	Yarab Mutton Stall                                	560068	NGR Layout, Bommanahalli                                                                                                                                                                                	t	icons/sp/local-store.png                                                   	\N	2023-12-19 16:28:26.714	WJ4F+W4Q                                          
+70	9902992013	SS Afzal Chicken Center                           	560068	 NGR Layout, Roopena Agrahara, Bommanahalli                                                                                                                                                             	t	icons/sp/local-store.png                                                   	\N	2023-12-19 16:31:30.325	WJ5F+242                                          
+71	7418414871	Tea House                                         	560068	WJ5F+464                                                                                                                                                                                                	t	icons/sp/local-store.png                                                   	\N	2023-12-19 16:34:58.48	 NGR Layout, Roopena Agrahara, Bommanahalli       
+72	9611890229	Wooden Cold Pressed Oil Store                     	560068	57, 3rd Cross Rd, NGR Layout, Roopena Agrahara, Bommanahalli                                                                                                                                            	t	icons/sp/local-store.png                                                   	\N	2023-12-19 16:37:39.366	WJ5F+466                                          
+73	8095815580	Krrs Fish centre                                  	560068	57, 3rd Cross Rd, NGR Layout, Virat Nagar                                                                                                                                                               	t	icons/sp/local-store.png                                                   	\N	2023-12-19 16:41:24.305	WJ5F+45P                                          
+\.
+
+
+--
+-- Data for Name: ServiceProviderToItems; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."ServiceProviderToItems" ("serviceProviderID", "itemID", price) FROM stdin;
+1	1	1
+\.
+
+
+--
+-- Data for Name: SubCategory; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."SubCategory" ("subCategoryID", "subCategoryName", "categoryID") FROM stdin;
+1	fakeSubCategoryGrocery                            	1
+2	fakeSubCategoryMedicines                          	2
+3	fakeSubCategoryMeat                               	3
+4	fakeSubCategorySaloon                             	4
+5	fakeSubCategoryRestaurant                         	5
+\.
+
+
+--
+-- Data for Name: Tags; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public."Tags" ("tagID", "tagName") FROM stdin;
+1	Protein        
+2	Health         
+\.
+
+
+--
+-- Name: Cart_cartId_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Cart_cartId_seq"', 711, true);
+
+
+--
+-- Name: Category_categoryID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Category_categoryID_seq"', 5, true);
+
+
+--
+-- Name: Customer_customerID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Customer_customerID_seq"', 260, true);
+
+
+--
+-- Name: Items_itemID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Items_itemID_seq"', 5, true);
+
+
+--
+-- Name: MeasurementUnit_measurementID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."MeasurementUnit_measurementID_seq"', 3, true);
+
+
+--
+-- Name: OrderStatus_orderStatusID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."OrderStatus_orderStatusID_seq"', 8, true);
+
+
+--
+-- Name: Orders_orderID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Orders_orderID_seq"', 561, true);
+
+
+--
+-- Name: ServiceProvider_serviceProviderID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."ServiceProvider_serviceProviderID_seq"', 73, true);
+
+
+--
+-- Name: SubCategory_subCategoryID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."SubCategory_subCategoryID_seq"', 5, true);
+
+
+--
+-- Name: Tags_tagID_seq; Type: SEQUENCE SET; Schema: public; Owner: root
+--
+
+SELECT pg_catalog.setval('public."Tags_tagID_seq"', 2, true);
+
+
+--
+-- Name: CartDetails CartDetails_cartId_itemId_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CartDetails"
+    ADD CONSTRAINT "CartDetails_cartId_itemId_key" UNIQUE ("cartId", "itemId");
+
+
+--
+-- Name: Cart Cart_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Cart"
+    ADD CONSTRAINT "Cart_pkey" PRIMARY KEY ("cartId");
+
+
+--
+-- Name: Category Category_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Category"
+    ADD CONSTRAINT "Category_pkey" PRIMARY KEY ("categoryID");
+
+
+--
+-- Name: CustomerStatus CustomerStatus_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CustomerStatus"
+    ADD CONSTRAINT "CustomerStatus_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: CustomerToServiceProvider CustomerToServiceProvider_customerID_serviceProviderID_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CustomerToServiceProvider"
+    ADD CONSTRAINT "CustomerToServiceProvider_customerID_serviceProviderID_key" UNIQUE ("customerID", "serviceProviderID");
+
+
+--
+-- Name: Customer Customer_mobileNumber_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Customer"
+    ADD CONSTRAINT "Customer_mobileNumber_key" UNIQUE ("mobileNumber");
+
+
+--
+-- Name: Customer Customer_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Customer"
+    ADD CONSTRAINT "Customer_pkey" PRIMARY KEY ("customerID");
+
+
+--
+-- Name: DisplayMessages DisplayMessages_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."DisplayMessages"
+    ADD CONSTRAINT "DisplayMessages_pkey" PRIMARY KEY ("messageId");
+
+
+--
+-- Name: FcmTokenCustomer FcmTokenCustomer_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."FcmTokenCustomer"
+    ADD CONSTRAINT "FcmTokenCustomer_pkey" PRIMARY KEY ("customerID", "fcmToken");
+
+
+--
+-- Name: FcmTokenServiceProvider FcmTokenServiceProvider_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."FcmTokenServiceProvider"
+    ADD CONSTRAINT "FcmTokenServiceProvider_pkey" PRIMARY KEY ("serviceProviderID", "fcmToken");
+
+
+--
+-- Name: ItemToSubItems ItemToSubItems_itemId_subItemId_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ItemToSubItems"
+    ADD CONSTRAINT "ItemToSubItems_itemId_subItemId_key" UNIQUE ("itemId", "subItemId");
+
+
+--
+-- Name: Items Items_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Items"
+    ADD CONSTRAINT "Items_pkey" PRIMARY KEY ("itemID");
+
+
+--
+-- Name: MeasurementUnit MeasurementUnit_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."MeasurementUnit"
+    ADD CONSTRAINT "MeasurementUnit_pkey" PRIMARY KEY ("measurementID");
+
+
+--
+-- Name: OTP OTP_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OTP"
+    ADD CONSTRAINT "OTP_pkey" PRIMARY KEY ("mobileNumber");
+
+
+--
+-- Name: OrderStatus OrderStatus_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderStatus"
+    ADD CONSTRAINT "OrderStatus_pkey" PRIMARY KEY ("orderStatusID");
+
+
+--
+-- Name: Orders Orders_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Orders"
+    ADD CONSTRAINT "Orders_pkey" PRIMARY KEY ("orderID");
+
+
+--
+-- Name: ServiceProviderToItems ServiceProviderToItems_serviceProviderID_itemID_price_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProviderToItems"
+    ADD CONSTRAINT "ServiceProviderToItems_serviceProviderID_itemID_price_key" UNIQUE ("serviceProviderID", "itemID", price);
+
+
+--
+-- Name: ServiceProvider ServiceProvider_mobileNumber_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProvider"
+    ADD CONSTRAINT "ServiceProvider_mobileNumber_key" UNIQUE ("mobileNumber");
+
+
+--
+-- Name: ServiceProvider ServiceProvider_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProvider"
+    ADD CONSTRAINT "ServiceProvider_pkey" PRIMARY KEY ("serviceProviderID");
+
+
+--
+-- Name: SubCategory SubCategory_subCategoryName_categoryID_key; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."SubCategory"
+    ADD CONSTRAINT "SubCategory_subCategoryName_categoryID_key" UNIQUE ("subCategoryName", "categoryID");
+
+
+--
+-- Name: Tags Tags_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Tags"
+    ADD CONSTRAINT "Tags_pkey" PRIMARY KEY ("tagID");
+
+
+--
+-- Name: ServiceProvider businessId; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProvider"
+    ADD CONSTRAINT "businessId" UNIQUE ("businessId");
+
+
+--
+-- Name: SubCategory subCategory_pkey; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."SubCategory"
+    ADD CONSTRAINT "subCategory_pkey" PRIMARY KEY ("subCategoryID");
+
+
+--
+-- Name: Items uniqueKey_cat_subCat_itemName; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Items"
+    ADD CONSTRAINT "uniqueKey_cat_subCat_itemName" UNIQUE ("itemName", "categoryID", "subCategoryID");
+
+
+--
+-- Name: fki_FcmTokenCustomer_Customer; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_FcmTokenCustomer_Customer" ON public."FcmTokenCustomer" USING btree ("customerID");
+
+
+--
+-- Name: fki_FcmTokenServiceProvider_ServiceProvider; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_FcmTokenServiceProvider_ServiceProvider" ON public."FcmTokenServiceProvider" USING btree ("serviceProviderID");
+
+
+--
+-- Name: fki_ItemToTags_Items; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_ItemToTags_Items" ON public."ItemToTags" USING btree ("itemID");
+
+
+--
+-- Name: fki_ItemToTags_Tags; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_ItemToTags_Tags" ON public."ItemToTags" USING btree ("tagID");
+
+
+--
+-- Name: fki_OrderDetails_Items; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_OrderDetails_Items" ON public."OrderDetails" USING btree ("itemID");
+
+
+--
+-- Name: fki_OrderDetails_Orders; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_OrderDetails_Orders" ON public."OrderDetails" USING btree ("orderID");
+
+
+--
+-- Name: fki_Order_Customer; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_Order_Customer" ON public."Orders" USING btree ("customerID");
+
+
+--
+-- Name: fki_Orders_OrderStatus; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_Orders_OrderStatus" ON public."Orders" USING btree ("orderStatusID");
+
+
+--
+-- Name: fki_Orders_ServiceProvider; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_Orders_ServiceProvider" ON public."Orders" USING btree ("serviceProviderID");
+
+
+--
+-- Name: fki_ServiceProviderToCategoryToSubCategoryToItems_Items; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_Items" ON public."ServiceProviderToItems" USING btree ("itemID");
+
+
+--
+-- Name: fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_ServiceProviderToCategoryToSubCategoryToItems_ServiceProvid" ON public."ServiceProviderToItems" USING btree ("serviceProviderID");
+
+
+--
+-- Name: fki_customerID; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_customerID" ON public."CustomerToServiceProvider" USING btree ("customerID");
+
+
+--
+-- Name: fki_serviceProviderID; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX "fki_serviceProviderID" ON public."CustomerToServiceProvider" USING btree ("serviceProviderID");
+
+
+--
+-- Name: CartDetails CartDetails_Cart; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CartDetails"
+    ADD CONSTRAINT "CartDetails_Cart" FOREIGN KEY ("cartId") REFERENCES public."Cart"("cartId") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CartDetails CartDetails_Items; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CartDetails"
+    ADD CONSTRAINT "CartDetails_Items" FOREIGN KEY ("itemId") REFERENCES public."Items"("itemID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Cart Cart_Customer; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Cart"
+    ADD CONSTRAINT "Cart_Customer" FOREIGN KEY ("customerId") REFERENCES public."Customer"("customerID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Cart Cart_ServiceProvider; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Cart"
+    ADD CONSTRAINT "Cart_ServiceProvider" FOREIGN KEY ("serviceProviderId") REFERENCES public."ServiceProvider"("serviceProviderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CustomerToServiceProvider CustomerToServiceProvider_Customer; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CustomerToServiceProvider"
+    ADD CONSTRAINT "CustomerToServiceProvider_Customer" FOREIGN KEY ("customerID") REFERENCES public."Customer"("customerID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CustomerToServiceProvider CustomerToServiceProvider_ServiceProvider; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."CustomerToServiceProvider"
+    ADD CONSTRAINT "CustomerToServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID") REFERENCES public."ServiceProvider"("serviceProviderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: FcmTokenCustomer FcmTokenCustomer_Customer; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."FcmTokenCustomer"
+    ADD CONSTRAINT "FcmTokenCustomer_Customer" FOREIGN KEY ("customerID") REFERENCES public."Customer"("customerID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: FcmTokenServiceProvider FcmTokenServiceProvider_ServiceProvider; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."FcmTokenServiceProvider"
+    ADD CONSTRAINT "FcmTokenServiceProvider_ServiceProvider" FOREIGN KEY ("serviceProviderID") REFERENCES public."ServiceProvider"("serviceProviderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ItemToTags ItemToTags_Items; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ItemToTags"
+    ADD CONSTRAINT "ItemToTags_Items" FOREIGN KEY ("itemID") REFERENCES public."Items"("itemID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ItemToTags ItemToTags_Tags; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ItemToTags"
+    ADD CONSTRAINT "ItemToTags_Tags" FOREIGN KEY ("tagID") REFERENCES public."Tags"("tagID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ItemToSubItems ItemsToSubItems_Items-ItemId; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ItemToSubItems"
+    ADD CONSTRAINT "ItemsToSubItems_Items-ItemId" FOREIGN KEY ("itemId") REFERENCES public."Items"("itemID") ON UPDATE CASCADE ON DELETE CASCADE NOT VALID;
+
+
+--
+-- Name: ItemToSubItems ItemsToSubItems_Items-SubItemId; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ItemToSubItems"
+    ADD CONSTRAINT "ItemsToSubItems_Items-SubItemId" FOREIGN KEY ("subItemId") REFERENCES public."Items"("itemID") NOT VALID;
+
+
+--
+-- Name: Items Items_MeasurementUnit; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Items"
+    ADD CONSTRAINT "Items_MeasurementUnit" FOREIGN KEY ("measurementID") REFERENCES public."MeasurementUnit"("measurementID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Items Items_SubCategory; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Items"
+    ADD CONSTRAINT "Items_SubCategory" FOREIGN KEY ("subCategoryID") REFERENCES public."SubCategory"("subCategoryID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderDetails OrderDetails_Items; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderDetails"
+    ADD CONSTRAINT "OrderDetails_Items" FOREIGN KEY ("itemID") REFERENCES public."Items"("itemID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderDetails OrderDetails_Orders; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderDetails"
+    ADD CONSTRAINT "OrderDetails_Orders" FOREIGN KEY ("orderID") REFERENCES public."Orders"("orderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderReminder OrderReminder_forStatusId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderReminder"
+    ADD CONSTRAINT "OrderReminder_forStatusId_fkey" FOREIGN KEY ("forStatusId") REFERENCES public."OrderStatus"("orderStatusID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderStatusTimeChanges OrderStatusTimeChanges_orderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderStatusTimeChanges"
+    ADD CONSTRAINT "OrderStatusTimeChanges_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES public."Orders"("orderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderStatusTimeChanges OrderStatusTimeChanges_orderStatusId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderStatusTimeChanges"
+    ADD CONSTRAINT "OrderStatusTimeChanges_orderStatusId_fkey" FOREIGN KEY ("orderStatusId") REFERENCES public."OrderStatus"("orderStatusID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Orders Orders_Customer; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Orders"
+    ADD CONSTRAINT "Orders_Customer" FOREIGN KEY ("customerID") REFERENCES public."Customer"("customerID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Orders Orders_OrderStatus; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Orders"
+    ADD CONSTRAINT "Orders_OrderStatus" FOREIGN KEY ("orderStatusID") REFERENCES public."OrderStatus"("orderStatusID");
+
+
+--
+-- Name: Orders Orders_ServiceProvider; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Orders"
+    ADD CONSTRAINT "Orders_ServiceProvider" FOREIGN KEY ("serviceProviderID") REFERENCES public."ServiceProvider"("serviceProviderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ServiceProviderToItems ServiceProviderToItems_Items; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProviderToItems"
+    ADD CONSTRAINT "ServiceProviderToItems_Items" FOREIGN KEY ("itemID") REFERENCES public."Items"("itemID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ServiceProviderToItems ServiceProviderToItems_ServiceProvider; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."ServiceProviderToItems"
+    ADD CONSTRAINT "ServiceProviderToItems_ServiceProvider" FOREIGN KEY ("serviceProviderID") REFERENCES public."ServiceProvider"("serviceProviderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: SubCategory SubCategory_categoryID_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."SubCategory"
+    ADD CONSTRAINT "SubCategory_categoryID_fkey" FOREIGN KEY ("categoryID") REFERENCES public."Category"("categoryID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderReminder orderReminder_orderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."OrderReminder"
+    ADD CONSTRAINT "orderReminder_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES public."Orders"("orderID") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Customer status; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public."Customer"
+    ADD CONSTRAINT status FOREIGN KEY (status) REFERENCES public."CustomerStatus"(id) NOT VALID;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
